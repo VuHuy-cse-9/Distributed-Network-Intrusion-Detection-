@@ -3,6 +3,7 @@
 import numpy as np
 from GMMs import gmms
 from GMMs import hyper
+from utils import detection_rate, false_alarm_rate
 
 #Hyper:
 N_classifiers = 7
@@ -14,15 +15,15 @@ beta = hyper.beta
 #Load data:
 N_labels = 2
 N_train = 100
-N_test = 50
+N_test = 10
 print(">> Loading dataset ...")
 #train dataset
 X_train = np.random.normal(0, 1, (N_train, N_classifiers)) #7 samples, 7 attributes
-Y_train = np.array((np.mean(X_train, axis=1) > 0.3), dtype=np.float)
+Y_train = np.array((np.mean(X_train, axis=1) > 0.3), dtype=np.float64)
 Y_train[np.squeeze(np.argwhere(Y_train == 0))] -= 1
 #Test dataset
 X_test = np.random.normal(0, 1, (N_test, N_classifiers)) #7 samples, 7 attributes
-Y_test = np.array(np.mean(X_test, axis=1) > 0.3, dtype=np.float)
+Y_test = np.array(np.mean(X_test, axis=1) > 0.0, dtype=np.float64)
 Y_test[np.squeeze(np.argwhere(Y_test == 0))] -= 1
 #Step 0: Initlialize weight
 print(">> Initializing ...")
@@ -97,20 +98,24 @@ for x, y in zip(X_train, Y_train):
     #Step 5.1: Calculate ensemble weight
     alphas = beta * np.log((1 - epsilon) / epsilon) + (1 - beta) * np.log(C / Omega)
     #Step 5.2: Normalize ensemble weight
-    print(f"left: {epsilon}")
-    print(f"right: {np.log(C / Omega)}")
-    print(f"alphas: {alphas}")
+    # print(f"left: {epsilon}")
+    # print(f"right: {np.log(C / Omega)}")
+    # print(f"alphas: {alphas}")
     alphas = alphas / np.sum(alphas)
     #Strong classifier:
     strong_gmms = gmms.copy()
     #np.sign(np.sum([alphas[i] * gmms[i](x) for i in range(N_classifiers)]))
     
-#evaluate
-#Detection rate?
-#False alarm rate
-count = 0
-for x, y in zip(X_test, Y_test):
-    if np.sign(y) == np.sign(np.sum([alphas[i] * gmms[i].predict(x) for i in range(N_classifiers)])):
-        count += 1
+#Evaluate
+predicts = []
+for x in X_test:
+    predicts.append(np.sign(np.sum([alphas[i] * strong_gmms[i].predict(x) for i in range(N_classifiers)])))
         
-print(f"Result: {count} / {N_test}")
+print(f"labels: {Y_test}")
+print(f"predicts: {predicts}")
+
+dtr = detection_rate(Y_test, predicts)
+flr = false_alarm_rate(Y_test, predicts)
+
+print(f">> detection rate: {dtr}")
+print(f">> false alarm rate: {flr}")
