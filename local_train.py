@@ -3,7 +3,8 @@
 import numpy as np
 from GMMs import gmms
 from GMMs import hyper
-from utils import detection_rate, false_alarm_rate
+from utils import detection_rate, false_alarm_rate, send_model
+import json
 
 #Hyper:
 N_classifiers = 7
@@ -16,8 +17,8 @@ eta = 1e-5
 n_components = 16
 #Load data:
 N_labels = 2
-N_train = 25000
-N_test = 1000
+N_train = 100
+N_test = 100
 print(">> Loading dataset ...")
 
 #train dataset
@@ -162,25 +163,34 @@ for x, y in zip(X_train, Y_train):
 #print(f">> len: {len(Y_test)} labels: {Y_test}")
 
 #GLOBAL Evaluate
-predicts = (np.sign(np.sum([alphas[i] * strong_gmms[i].predict(X_test[:, i]) for i in range(N_classifiers)])))
+# predicts = (np.sign(np.sum([alphas[i] * strong_gmms[i].predict(X_test[:, i]) for i in range(N_classifiers)])))
         
-#print(f">> len: {len(predicts)} global predicts: {predicts}")
+# #print(f">> len: {len(predicts)} global predicts: {predicts}")
 
-dtr = detection_rate(Y_test, predicts)
-flr = false_alarm_rate(Y_test, predicts)
+# dtr = detection_rate(Y_test, predicts)
+# flr = false_alarm_rate(Y_test, predicts)
 
-print(">> Global:")
-print(f">> detection rate: {dtr}")
-print(f">> false alarm rate: {flr}")
+# print(">> Global:")
+# print(f">> detection rate: {dtr}")
+# print(f">> false alarm rate: {flr}")
 
-#Local Evaluate:
-for local_index in range(N_classifiers):
-    predicts = []
-    for x in X_test:
-        predicts.append(strong_gmms[local_index].predict(X_test[:, local_index]))
-    dtr = detection_rate(Y_test, predicts)
-    flr = false_alarm_rate(Y_test, predicts)
-    print(f">> model: {local_index}")
-    print(f"Detection rate: {dtr}")
-    print(f"False alarm rate: {flr}")
-    #print(f">> len: {len(predicts)} global predicts: {predicts}")
+# #Local Evaluate:
+# for local_index in range(N_classifiers):
+#     predicts = []
+#     for x in X_test:
+#         predicts.append(strong_gmms[local_index].predict(X_test[:, local_index]))
+#     dtr = detection_rate(Y_test, predicts)
+#     flr = false_alarm_rate(Y_test, predicts)
+#     print(f">> model: {local_index}")
+#     print(f"Detection rate: {dtr}")
+#     print(f"False alarm rate: {flr}")
+#     #print(f">> len: {len(predicts)} global predicts: {predicts}")
+    
+#Send model to global nodes
+model_dict = {}
+model_dict["node"] = 1
+for index, gmms in enumerate(strong_gmms):
+    model_dict[f"model_{index}"] = gmms.get_parameters()
+print(json.dumps(model_dict))
+send_model(model_dict)
+

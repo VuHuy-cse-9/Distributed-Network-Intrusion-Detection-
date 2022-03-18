@@ -1,9 +1,10 @@
 from gmms import OnlineGMM
 import numpy as np
 import matplotlib.pyplot as plt
+import json
 
 
-N_samples = 200
+N_samples = 50
 N_test = 30
 #TRAINING SET
 X0 = np.random.normal(loc=2.0, scale=0.3, size=(N_samples,))
@@ -51,35 +52,39 @@ print(f">>test std: {train_normal_std}")
 # print(f"N: {model.N}")
 # print(f"Predict: {model.predict(X[2])}")
 
-predicts = model.predict(X_test)
+# predicts = model.predict(X_test)
 
-print(f"labels: {Y_test}")
-print(f"predic: {predicts}")
+# print(f"labels: {Y_test}")
+# print(f"predic: {predicts}")
 
-def detection_rate(labels, predicts):
-    """Calculate detection rate (TPR)
+# def detection_rate(labels, predicts):
+#     """Calculate detection rate (TPR)
 
-    Args:
-        labels (_array-like (N_test,)_): _label of test dataset_
-        predicts (_array-like (N_test_): _label predicted by model_
-    """
-    # print(f"TP: {np.sum((labels - predicts)[labels == -1] == 0, dtype=np.float32)}")
-    # print(f"TP + FN: {np.sum(labels == -1)}")
-    return np.sum((labels - predicts)[labels == -1] == 0, dtype=np.float32) / np.sum(labels == -1)
+#     Args:
+#         labels (_array-like (N_test,)_): _label of test dataset_
+#         predicts (_array-like (N_test_): _label predicted by model_
+#     """
+#     # print(f"TP: {np.sum((labels - predicts)[labels == -1] == 0, dtype=np.float32)}")
+#     # print(f"TP + FN: {np.sum(labels == -1)}")
+#     return np.sum((labels - predicts)[labels == -1] == 0, dtype=np.float32) / np.sum(labels == -1)
 
-def false_alarm_rate(labels, predicts):
-    """Calculate false alarm rate
-    Args:
-        labels (_array-like (N_test,)_): _label of test dataset_
-        predicts (_array-like (N_test_): _label predicted by model_
-    """
-    # print(f"FP: {np.sum((labels - predicts)[labels == 1] != 0, dtype=np.float32)}")
-    # print(f"FP + TN: {np.sum(labels == 1)}")
-    return np.sum((labels - predicts)[labels == 1] != 0, dtype=np.float32) / np.sum(labels == 1)
+# def false_alarm_rate(labels, predicts):
+#     """Calculate false alarm rate
+#     Args:
+#         labels (_array-like (N_test,)_): _label of test dataset_
+#         predicts (_array-like (N_test_): _label predicted by model_
+#     """
+#     # print(f"FP: {np.sum((labels - predicts)[labels == 1] != 0, dtype=np.float32)}")
+#     # print(f"FP + TN: {np.sum(labels == 1)}")
+#     return np.sum((labels - predicts)[labels == 1] != 0, dtype=np.float32) / np.sum(labels == 1)
 
-dtr = detection_rate(Y_test, predicts)
-flr = false_alarm_rate(Y_test, predicts)
+# dtr = detection_rate(Y_test, predicts)
+# flr = false_alarm_rate(Y_test, predicts)
 
-print(f">> detection rate: {dtr}")
-print(f">> false alarm rate: {flr}")
+# print(f">> detection rate: {dtr}")
+# print(f">> false alarm rate: {flr}")
+
+print("=====================================")
+print(model.get_parameters())    
+print(json.dumps(model.get_parameters()))
 

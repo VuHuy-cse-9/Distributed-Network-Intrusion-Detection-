@@ -147,3 +147,19 @@ class OnlineGMM:
             if np.min(probs[0] - (probs[1:] / (self.n_labels - 1))) > 0: #How can we know the fist index is labels zeros???
                 return 1
             return -1
+        
+    def get_parameters(self):
+        return {
+            "nlabel": self.n_labels,
+            "ncomponent": self.n_components,
+            "means": self.means.tolist(),
+            "stds": self.stds.tolist(),
+            "weights": self.weight.tolist(),
+        }
+        
+    def set_parameters(self, model_para):
+        self.n_labels = model_para["nlabel"]
+        self.n_components = model_para["ncomponent"]
+        self.means = np.array(model_para["means"], np.float64)
+        self.stds = np.array(model_para["stds"], np.float64)
+        self.weight = np.array(model_para["weights"], np.float64)

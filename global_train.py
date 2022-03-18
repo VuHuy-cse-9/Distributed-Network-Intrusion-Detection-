@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.svm import SVC
-from utils import detection_rate
+from utils import detection_rate, get_models
 from GMMs import gmms
 from GMMs import hyper
 
@@ -8,7 +8,7 @@ print(">> Initialize ...")
 #Hyper
 Vmax = 2
 Q = 12
-N_nodes = 6
+N_nodes = 1
 step = 0.125
 tau = 0.25  #Equation (34), weight
 N_classifiers = 7
@@ -28,14 +28,17 @@ print(">> Load parameters from local nodes ...")
 alphas = np.ones((Q, N_nodes, N_classifiers))
 
 print(f">> type: {type(gmms.OnlineGMM)}")
+model_params = get_models()
 
 local_models = np.empty((Q, N_nodes, N_classifiers), dtype=gmms.OnlineGMM)
 for Q_index in range(Q):
     for node_index in range(N_nodes):
         for index in range(N_classifiers):
             local_models[Q_index, node_index, index] = gmms.OnlineGMM(hyper.std, n_components=n_components, T=1)
-            local_models[Q_index, node_index, index].build(n_labels=N_labels)
-
+            local_models[Q_index, node_index, index].set_parameters(model_params[node_index][f"model_{index}"])
+            
+print("Load model complete")
+            
 #Clone train dataset
 Data_train = np.random.normal(0, 1, (N_train, N_classifiers)) #7 samples, 7 attributes
 Y_train = np.array((np.mean(Data_train, axis=1) > -0.5), dtype=np.float64)
@@ -94,7 +97,6 @@ for step in range(N_iter):
     print(f"=============STEP {step + 1}===============")
     #Get number of nodes be used in particle i
     L = np.sum(X > 0, axis=1)
-    print(f">> L: {L}")
     
     #Training SVM
     r_train = data_to_vector(Data_train, X)
