@@ -73,39 +73,39 @@ class OnlineGMM:
             t   (_array_like (nlabels, )_) indices of GMM's components have min weight
         """
         class_index = self._convert_label_to_index(y)
-        print("===========================================================")
-        print(f">> Class index: {class_index}")
+        #print("===========================================================")
+        #print(f">> Class index: {class_index}")
         # Step 1: Update weight omega_j^y
         #print(f">> {np.abs((x - self.means) / self.stds)}")
         Tau = np.squeeze(np.abs((x - self.means[class_index, :]) / self.stds[class_index, :]) < self.T)
         self.N += Tau
-        print(f"N: {self.N}")
+        #print(f"N: {self.N}")
         self.weight[class_index] = self.N[class_index] / np.sum(self.N[class_index], keepdims=True)
-        print(f"weight: {self.weight}")
+        #print(f"weight: {self.weight}")
         
         # Step 2: Calculate the relation between (x, y)
         Z = np.sum(
             self.weight[class_index] * self.predict_prob(x, class_index) * Tau
         )
-        print(f">> Z: {Z}")
-        print(f"predict_prob: {self.predict_prob(x)}")
+        #print(f">> Z: {Z}")
+        #print(f"predict_prob: {self.predict_prob(x)}")
         
-        print("-------------------------------------")
+        #print("-------------------------------------")
         if Z > 0:      
             # Step 3: Calculate the probability that (x, y) 
             # belongs to the ith component of the GMM.
             delta = \
                 (self.weight[class_index] * self.predict_prob(x, class_index) * Tau) \
              / Z + self.epsilon
-            print(f">> delta: {delta}")
+            #print(f">> delta: {delta}")
             self.A[class_index] += delta
-            print(f">> A:  {self.A}")
+            #print(f">> A:  {self.A}")
             
             # Step 4: Update parameters for each components
             self.means[class_index] = \
                     ((self.A[class_index] - delta) * self.means[class_index]  + delta * x) \
                     / self.A[class_index]
-            print(f">> means: {self.means}")
+            #print(f">> means: {self.means}")
             """
             CAUTION: EASILY TO OVERFLOW
             """  
@@ -113,7 +113,7 @@ class OnlineGMM:
                 ((self.A[class_index] - delta) * (self.stds[class_index] ** 2)  \
                 + (self.A[class_index] - delta) * delta * (x - self.means[class_index]) ** 2) \
                 / self.A[class_index])
-            print(f">> stds: {self.stds}")
+            #print(f">> stds: {self.stds}")
         
         else:
             # Step 5: Reset parameters of the weakest components
