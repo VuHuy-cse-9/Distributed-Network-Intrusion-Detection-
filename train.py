@@ -16,19 +16,23 @@ eta = 1e-5
 n_components = 16
 #Load data:
 N_labels = 2
-N_train = 50000
-N_test = 50
+N_train = 25000
+N_test = 1000
 print(">> Loading dataset ...")
 
 #train dataset
-X_train = np.random.normal(0, 1, (N_train, N_classifiers)) #7 samples, 7 attributes
-Y_train = np.array((np.mean(X_train, axis=1) > 0.0), dtype=np.int32)
-Y_train[Y_train == 0] -= 1
+X0 = np.random.normal(loc=2.0, scale=0.3, size=(N_train, N_classifiers))
+X1 = np.random.normal(loc=4.0, scale=0.3, size=(N_train, N_classifiers))
+X_train = np.concatenate((X0, X1))
+Y_train = np.concatenate((np.ones((N_train, ), dtype=np.int32),
+                    -1*np.ones((N_train, ), dtype=np.int32)))
 
 #Test dataset
-X_test = np.random.normal(0, 1, (N_test, N_classifiers)) #7 samples, 7 attributes
-Y_test = np.array(np.mean(X_test, axis=1) > 0.0, dtype=np.int32)
-Y_test[Y_test == 0] -= 1
+X0 = np.random.normal(loc=2.0, scale=0.3, size=(N_test, N_classifiers))
+X1 = np.random.normal(loc=4.0, scale=0.3, size=(N_test, N_classifiers))
+X_test = np.concatenate((X0, X1), axis=0)
+Y_test = np.concatenate((np.ones((N_test, ), dtype=np.int32), 
+                        -1*np.ones((N_test, ), dtype=np.int32)))
 
 #Summerize data:
 print(">> Train")
@@ -158,9 +162,7 @@ for x, y in zip(X_train, Y_train):
 #print(f">> len: {len(Y_test)} labels: {Y_test}")
 
 #GLOBAL Evaluate
-predicts = []
-for x in X_test:
-    predicts.append(np.sign(np.sum([alphas[i] * strong_gmms[i].predict(x[i]) for i in range(N_classifiers)])))
+predicts = (np.sign(np.sum([alphas[i] * strong_gmms[i].predict(X_test[:, i]) for i in range(N_classifiers)])))
         
 #print(f">> len: {len(predicts)} global predicts: {predicts}")
 
@@ -175,7 +177,7 @@ print(f">> false alarm rate: {flr}")
 for local_index in range(N_classifiers):
     predicts = []
     for x in X_test:
-        predicts.append(strong_gmms[local_index].predict(x[local_index]))
+        predicts.append(strong_gmms[local_index].predict(X_test[:, local_index]))
     dtr = detection_rate(Y_test, predicts)
     flr = false_alarm_rate(Y_test, predicts)
     print(f">> model: {local_index}")

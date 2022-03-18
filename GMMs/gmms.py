@@ -126,16 +126,24 @@ class OnlineGMM:
     def predict(self, x):
         """Return predcited class
         Args:
-            x (_float_): _feature value_
+            x (_(nsamples, )_ or (nsamples, 1)): _feature value_
         return 
         """
-        probs = []
-        for class_index in range(self.n_labels):
-            probs.append(np.sum(self.weight[class_index] * self.predict_prob(x, class_index)))
-        probs = np.array(probs)
-        #print(probs)
-        if (probs[0] > probs[1:] / (self.n_labels - 1)).all(): #How can we know the fist index is labels zeros???
-            return 1
-        return -1        
-        
-        
+        if not np.isscalar(x):
+            x = x[:, None]
+            probs = []
+            for class_index in range(self.n_labels):
+                probs.append(np.sum(self.weight[class_index] * self.predict_prob(x, class_index), axis=1))
+            probs = np.array(probs)
+            result = np.array(np.min(probs[:, 0, None] - (probs[:, 1:] / (self.n_labels - 1)), axis=1) > 0, np.int32) #(Nsamples,)
+            result[result == 0] = -1
+            return result
+        else:
+            probs = []
+            for class_index in range(self.n_labels):
+                probs.append(np.sum(self.weight[class_index] * self.predict_prob(x, class_index)))
+            probs = np.array(probs)
+            #print(probs)
+            if np.min(probs[0] - (probs[1:] / (self.n_labels - 1))) > 0: #How can we know the fist index is labels zeros???
+                return 1
+            return -1

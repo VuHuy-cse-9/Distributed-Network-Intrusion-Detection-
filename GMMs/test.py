@@ -6,9 +6,11 @@ import matplotlib.pyplot as plt
 N_samples = 200
 N_test = 30
 #TRAINING SET
-X = np.random.normal(loc=0, scale=2, size=N_samples)
-Y = np.array((X > -0.5), dtype=np.int32)
-Y[Y == 0] -= 1
+X0 = np.random.normal(loc=2.0, scale=0.3, size=(N_samples,))
+X1 = np.random.normal(loc=4.0, scale=0.3, size=(N_samples,))
+X = np.concatenate((X0, X1))
+Y = np.concatenate((np.ones((N_samples, ), dtype=np.int32),
+                    -1*np.ones((N_samples, ), dtype=np.int32)))
 train_normal_mean = np.mean(X[Y==1])
 train_normal_std = np.sqrt(np.sum((X[Y==1] - train_normal_mean)**2 / np.sum(Y==1)))
 
@@ -16,9 +18,11 @@ train_attack_mean = np.mean(X[Y==-1])
 train_attack_std = np.sqrt(np.sum((X[Y==-1] - train_attack_mean)**2 / np.sum(Y==-1)))
 
 #TESTING SET
-X_test = np.random.normal(loc=0, scale=2, size=N_test)
-Y_test = np.array((X_test > -0.5), dtype=np.int32)
-Y_test[Y_test == 0] -= 1
+X0 = np.random.normal(loc=2.0, scale=0.3, size=(N_test,))
+X1 = np.random.normal(loc=4.0, scale=0.3, size=(N_test,))
+X_test = np.concatenate((X0, X1), axis=0)
+Y_test = np.concatenate((np.ones((N_test, ), dtype=np.int32), 
+                        -1*np.ones((N_test, ), dtype=np.int32)))
 
 # plt.scatter(np.arange(50), X)
 # plt.show()
@@ -33,6 +37,7 @@ model.build(n_labels=2)
     # print(f"Predict: {model.predict(X[2])}")
 
 for x, y in zip(X, Y):
+    print(f"x: {x}, y: {y}")
     model.fit(x, y)
 print(">> AFTER TRAIN")
 print(f">>train mean: {train_normal_mean}")
@@ -46,9 +51,7 @@ print(f">>test std: {train_normal_std}")
 # print(f"N: {model.N}")
 # print(f"Predict: {model.predict(X[2])}")
 
-predicts = []
-for x in X_test:
-    predicts.append(model.predict(x))
+predicts = model.predict(X_test)
 
 print(f"labels: {Y_test}")
 print(f"predic: {predicts}")
