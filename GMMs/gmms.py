@@ -35,7 +35,16 @@ class OnlineGMM:
         self.N = np.ones((self.n_labels, self.n_components), dtype=np.int32)
         self.A = np.ones((self.n_labels, self.n_components))
     
-    def predict_prob(self, x, gmms_indices = None):
+    def _convert_label_to_index(self, label):
+        if (label > 1) or (label == 0) or ((label * -1) > (self.n_labels - 1)):
+            print("Error: label index out of bound")
+            return None
+        if label == 1:
+            return 0
+        return label * -1
+        
+    
+    def predict_prob(self, x, class_index=None, gmms_indices = None):
         """_return probability of Gaussian_
         Args:
             x: (_float_): feature value of sample
@@ -43,13 +52,15 @@ class OnlineGMM:
         Variables:
             result: (_array-like (n_labels, n_components)_) probability of each GMM
         """
+        
         if gmms_indices == None:
-            return 1.0 / (self.stds * np.sqrt(2 * np.pi)) * np.exp(-0.5 * ((x - self.means) / self.stds) ** 2) 
-        return 1.0 / (self.stds[gmms_indices, :] * np.sqrt(2 * np.pi))  * \
-            np.exp(-0.5 * ((x - self.means[gmms_indices, :]) / self.stds[gmms_indices, :]) ** 2) 
+            return 1.0 / (self.stds[class_index] * np.sqrt(2 * np.pi)) * \
+                    np.exp(-0.5 * ((x - self.means[class_index]) / self.stds[class_index]) ** 2) 
+        return 1.0 / (self.stds[class_index, gmms_indices] * np.sqrt(2 * np.pi))  * \
+            np.exp(-0.5 * ((x - self.means[class_index, gmms_indices]) / self.stds[class_index, gmms_indices]) ** 2) 
         
         
-    def fit(self, x):
+    def fit(self, x, y):
         """Updating Online GMM
         Args:
             x: (_float_): feature value of sample
@@ -61,57 +72,56 @@ class OnlineGMM:
                                                                 component equation (9)
             t   (_array_like (nlabels, )_) indices of GMM's components have min weight
         """
+        class_index = self._convert_label_to_index(y)
+        print("===========================================================")
+        print(f">> Class index: {class_index}")
         # Step 1: Update weight omega_j^y
         #print(f">> {np.abs((x - self.means) / self.stds)}")
-        Tau = np.abs((x - self.means) / self.stds) < self.T
+        Tau = np.squeeze(np.abs((x - self.means[class_index, :]) / self.stds[class_index, :]) < self.T)
         self.N += Tau
-        #print(f"N: {self.N}")
-        self.weight = self.N / np.sum(self.N, axis=1, keepdims=True)
-        #print(f"weight: {self.weight}")
+        print(f"N: {self.N}")
+        self.weight[class_index] = self.N[class_index] / np.sum(self.N[class_index], keepdims=True)
+        print(f"weight: {self.weight}")
         
         # Step 2: Calculate the relation between (x, y)
         Z = np.sum(
-            self.weight * self.predict_prob(x) * Tau, 
-            axis=1
+            self.weight[class_index] * self.predict_prob(x, class_index) * Tau
         )
-        #print(f"Z: {Z}")
-        #print(f"predict_prob: {self.predict_prob(x)}")
+        print(f">> Z: {Z}")
+        print(f"predict_prob: {self.predict_prob(x)}")
         
-        #Only GMMs has Z > 0 go to step 3, 4, else go to step 5
-        relate_indices = np.nonzero(Z)  #Z > 0
-        no_relate_indices = np.nonzero(Z <= 0)
-        
-        if relate_indices[0].size != 0:      
+        print("-------------------------------------")
+        if Z > 0:      
             # Step 3: Calculate the probability that (x, y) 
             # belongs to the ith component of the GMM.
             delta = \
-                (self.weight[relate_indices, :] * self.predict_prob(x, relate_indices) * Tau[relate_indices, :]) \
-             / Z[relate_indices, None] + self.epsilon
-            #print(f"delta: {delta}")
-            self.A[relate_indices, :] += delta
-            #print(f"A: {self.A}")
+                (self.weight[class_index] * self.predict_prob(x, class_index) * Tau) \
+             / Z + self.epsilon
+            print(f">> delta: {delta}")
+            self.A[class_index] += delta
+            print(f">> A:  {self.A}")
             
             # Step 4: Update parameters for each components
-            self.means[relate_indices, :] = \
-                    ((self.A[relate_indices, :] - delta) * self.means[relate_indices, :]  + delta * x) \
-                    / self.A[relate_indices, :]
-            #print(f"means: {self.means}")
+            self.means[class_index] = \
+                    ((self.A[class_index] - delta) * self.means[class_index]  + delta * x) \
+                    / self.A[class_index]
+            print(f">> means: {self.means}")
             """
             CAUTION: EASILY TO OVERFLOW
             """  
-            self.stds[relate_indices, :] = np.sqrt(
-                ((self.A[relate_indices, :] - delta) * (self.stds[relate_indices, :] ** 2)  \
-                + (self.A[relate_indices, :] - delta) * delta * (x - self.means[relate_indices, :]) ** 2) \
-                / self.A[relate_indices, :])
-            #print(f"stds: {self.stds}")
+            self.stds[class_index] = np.sqrt(
+                ((self.A[class_index] - delta) * (self.stds[class_index] ** 2)  \
+                + (self.A[class_index] - delta) * delta * (x - self.means[class_index]) ** 2) \
+                / self.A[class_index])
+            print(f">> stds: {self.stds}")
         
-        # Step 5: Reset parameters of the weakest components
-        for indice in no_relate_indices[0]:
-            t = np.argmin(self.weight[indice])
-            self.N[indice, t] += 1
-            self.A[indice, t] += 1
-            self.means[indice, t] = x
-            self.stds[indice, t] = self.default_std
+        else:
+            # Step 5: Reset parameters of the weakest components
+            t = np.argmin(self.weight[class_index])
+            self.N[class_index, t] += 1
+            self.A[class_index, t] += 1
+            self.means[class_index, t] = x
+            self.stds[class_index, t] = self.default_std
     
     def predict(self, x):
         """Return predcited class
@@ -119,10 +129,13 @@ class OnlineGMM:
             x (_float_): _feature value_
         return 
         """
-        probs = np.sum(self.weight * self.predict_prob(x), axis=1) 
+        probs = []
+        for class_index in range(self.n_labels):
+            probs.append(np.sum(self.weight[class_index] * self.predict_prob(x, class_index)))
+        probs = np.array(probs)
         #print(probs)
-        if (probs[0] > probs[1:] / (self.n_labels - 1)).all():
+        if (probs[0] > probs[1:] / (self.n_labels - 1)).all(): #How can we know the fist index is labels zeros???
             return 1
-        return -1
+        return -1        
         
         
