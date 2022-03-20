@@ -78,15 +78,21 @@ class OnlineGMM:
         # Step 1: Update weight omega_j^y
         #print(f">> {np.abs((x - self.means) / self.stds)}")
         Tau = np.squeeze(np.abs((x - self.means[class_index, :]) / self.stds[class_index, :]) < self.T)
-        self.N += Tau
-        #print(f"N: {self.N}")
+        if Tau.shape != (self.n_components, ):
+            raise Exception(f"Tau shape should be: {(self.n_components, )}, instead {Tau.shape}")
+        
+        self.N[class_index] += Tau   
+        
         self.weight[class_index] = self.N[class_index] / np.sum(self.N[class_index], keepdims=True)
         #print(f"weight: {self.weight}")
         
+        if self.weight.shape != (self.n_labels, self.n_components):
+            raise Exception(f"weight shape should be: {(self.n_labels, self.n_components)}, instead {self.weight.shape}")
         # Step 2: Calculate the relation between (x, y)
         Z = np.sum(
             self.weight[class_index] * self.predict_prob(x, class_index) * Tau
         )
+        
         #print(f">> Z: {Z}")
         #print(f"predict_prob: {self.predict_prob(x)}")
         
@@ -97,22 +103,24 @@ class OnlineGMM:
             delta = \
                 (self.weight[class_index] * self.predict_prob(x, class_index) * Tau) \
              / Z + self.epsilon
-            #print(f">> delta: {delta}")
+            if delta.shape != (self.n_components, ):
+                raise Exception(f"delta shape should be: {(self.n_labels, self.n_components)}, instead {delta.shape}")
+            
             self.A[class_index] += delta
-            #print(f">> A:  {self.A}")
+            print(f">> delta: {delta}")
+            print(f">> A:  {self.A}")
             
             # Step 4: Update parameters for each components
             self.means[class_index] = \
                     ((self.A[class_index] - delta) * self.means[class_index]  + delta * x) \
                     / self.A[class_index]
-            #print(f">> means: {self.means}")
+            print(f">> means: {self.means}")
             """
             CAUTION: EASILY TO OVERFLOW
             """  
             self.stds[class_index] = np.sqrt(
-                ((self.A[class_index] - delta) * (self.stds[class_index] ** 2)  \
-                + (self.A[class_index] - delta) * delta * (x - self.means[class_index]) ** 2) \
-                / self.A[class_index])
+                ((self.A[class_index] - delta) * (self.stds[class_index] ** 2)) / self.A[class_index]  \
+                + ((self.A[class_index] - delta) * delta * (x - self.means[class_index]) ** 2) / self.A[class_index]**2)
             #print(f">> stds: {self.stds}")
         
         else:

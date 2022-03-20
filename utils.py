@@ -103,15 +103,17 @@ def get_data():
 
 def load_fake_data(N_train, N_test, N_attribute):
     #train dataset
-    X0 = np.random.normal(loc=2.0, scale=0.3, size=(N_train, N_attribute))
-    X1 = np.random.normal(loc=4.0, scale=0.3, size=(N_train, N_attribute))
+    X0 = np.random.normal(loc=2.0, scale=1.0, size=(N_train, N_attribute))
+    X1 = np.random.normal(loc=5.0, scale=1.0, size=(N_train, N_attribute))
     X_train = np.concatenate((X0, X1))
     Y_train = np.concatenate((np.ones((N_train, ), dtype=np.int32),
                         -1*np.ones((N_train, ), dtype=np.int32)))
+    
 
-    shuffle_train_index = np.random.shuffle(np.arange(N_train))
-    X_train  = np.squeeze(X_train[shuffle_train_index], axis=0)
-    Y_train = np.squeeze(Y_train[shuffle_train_index], axis=0)
+    shuffle_train_index = np.arange(2*N_train)
+    np.random.shuffle(shuffle_train_index)
+    X_train  = X_train[shuffle_train_index]
+    Y_train = Y_train[shuffle_train_index]
 
     
 
@@ -122,9 +124,11 @@ def load_fake_data(N_train, N_test, N_attribute):
     Y_test = np.concatenate((np.ones((N_test, ), dtype=np.int32), 
                             -1*np.ones((N_test, ), dtype=np.int32)))
     
-    shuffle_test_index = np.random.shuffle(np.arange(N_test))
-    X_test  = np.squeeze(X_test[shuffle_test_index], axis=0)
-    Y_test = np.squeeze(Y_test[shuffle_test_index], axis=0)
+    shuffle_test_index = np.arange(2*N_test)
+    np.random.shuffle(shuffle_test_index)
+    X_test  = X_test[shuffle_test_index]
+    Y_test = Y_test[shuffle_test_index]
+    
     
     if X_train.shape != (2*N_train, N_attribute) or \
         Y_train.shape != (2*N_train, ):

@@ -24,7 +24,7 @@ T = 0.5
 
 #Load data:
 N_labels = 2
-N_train = 5000
+N_train = 100
 N_test = 100
 print(">> Loading dataset ...")
 X_train, X_test, Y_train, Y_test = load_fake_data(N_train, N_test, N_classifiers)
