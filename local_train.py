@@ -3,46 +3,36 @@
 import numpy as np
 from GMMs import gmms
 from GMMs import hyper
-from utils import detection_rate, false_alarm_rate, send_model
+from utils import detection_rate, false_alarm_rate, send_model, load_fake_data, send_data
 import json
+from tqdm import tqdm
+from visualize import plot_multi_norm_data
 
 #Hyper:
-N_classifiers = 7
+N_classifiers = 7   #Depend on number of feature
 r = hyper.r
 p = hyper.p
 P = hyper.P
 gamma = hyper.gamma
 beta = hyper.beta
 eta = 1e-5
-n_components = 16
+n_components = hyper.n_components
+N_data_send_count = hyper.N_data_local_send
+N_normal_send = N_data_send_count / 2
+N_attack_send = N_data_send_count / 2
+T = 0.5
+
 #Load data:
 N_labels = 2
-N_train = 100
+N_train = 5000
 N_test = 100
 print(">> Loading dataset ...")
-
-#train dataset
-X0 = np.random.normal(loc=2.0, scale=0.3, size=(N_train, N_classifiers))
-X1 = np.random.normal(loc=4.0, scale=0.3, size=(N_train, N_classifiers))
-X_train = np.concatenate((X0, X1))
-Y_train = np.concatenate((np.ones((N_train, ), dtype=np.int32),
-                    -1*np.ones((N_train, ), dtype=np.int32)))
-
-#Test dataset
-X0 = np.random.normal(loc=2.0, scale=0.3, size=(N_test, N_classifiers))
-X1 = np.random.normal(loc=4.0, scale=0.3, size=(N_test, N_classifiers))
-X_test = np.concatenate((X0, X1), axis=0)
-Y_test = np.concatenate((np.ones((N_test, ), dtype=np.int32), 
-                        -1*np.ones((N_test, ), dtype=np.int32)))
+X_train, X_test, Y_train, Y_test = load_fake_data(N_train, N_test, N_classifiers)
 
 #Summerize data:
-print(">> Train")
-print(f"Number of normal: {np.sum(Y_train == 1)}")
-print(f"Number of attack: {np.sum(Y_train == -1)}")
-
-print(">> Test")
-print(f"Number of normal: {np.sum(Y_test == 1)}")
-print(f"Number of attack: {np.sum(Y_test == -1)}")
+print("=====================DATA SUMMARY===================")
+print(f"Train: Number of normal {np.sum(Y_train == 1)}, Number of attack {np.sum(Y_train == -1)}")
+print(f"Test: Number of normal {np.sum(Y_test == 1)}, Number of attack {np.sum(Y_test == -1)}")
 
 #Step 0: Initlialize weight
 print(">> Initializing ...")
@@ -52,22 +42,40 @@ lamda_sc = np.zeros((N_classifiers, ))  #Use in step 3, 4
 lamda_sw = np.zeros((N_classifiers, ))  
 C = np.zeros((N_classifiers, ))         #Use in step 3, 4, 5
 v  = np.zeros((N_classifiers,))         #combined classification rate v_t, equation (23)
-lamda = 0                               #Sample weight, using in equation (22)
 epsilon = np.zeros((N_classifiers, ))   
+lamda = 0                               #Sample weight, using in equation (22)
 
 #Initialize classifier
 alphas = np.ones((N_classifiers,))
 strong_gmms = None
-gmms = [gmms.OnlineGMM(hyper.std, n_components=n_components, T=1)] * N_classifiers
+gmms = [gmms.OnlineGMM(hyper.std, n_components=n_components, T=T)] * N_classifiers
 for gmm in gmms:
     gmm.build(n_labels=N_labels)
+    
+#Visualize:
+print(">> Visualize before training ...")
+means = np.array([gmms[i].means for i in range(N_classifiers)])
+stds = np.array([gmms[i].stds for i in range(N_classifiers)])
+print(means.shape)
+print(stds.shape)
+plot_multi_norm_data(X_train, Y_train, means, stds)
 
 print(">> Training")
-for x, y in zip(X_train, Y_train):
+for x, y in tqdm(zip(X_train, Y_train), total=2*N_train):
 #Step 1: Update number of normal and attack sample
 #        and initialize weight for new sample
-    #print("======================================")
-    #print(f">> Class: {y}")
+    #TODO: THIS IS JUST FOR DEMO
+    # if N_data_send_count > 0:
+    #     #Share data.
+    #     if y == 1 and N_normal_send > 0:
+    #         send_data(x.tolist(), int(y))
+    #         N_normal_send -= 1
+    #         N_data_send_count -= 1
+    #     if y < 0 and N_attack_send > 0:
+    #         send_data(x.tolist(), int(y))
+    #         N_attack_send -= 1
+    #         N_data_send_count -= 1
+    
     if y == 1:
         S_normal += 1
         lamda = (S_normal + S_attack) / S_normal * r
@@ -84,13 +92,9 @@ for x, y in zip(X_train, Y_train):
     #print(f">> sign y: {np.sign(y)}")
 #Step 3: Update classifier
     #Step 3.1: Sort list classifier:
-    #BUG: HAVEN'T SORT STRONG INDEX
     sort_index = np.argsort(v)
     sort_strong_index = np.argwhere(v[sort_index] <= 0.5)
-    #print(f">> sort strong index: {sort_strong_index}")
     strong_index = np.squeeze(sort_index[sort_strong_index], axis=1)
-    # for index in strong_index:
-    #     print(f">> strong index: {index}, v: {v[index]}")
     
     weak_index = np.squeeze(np.argwhere(v > 0.5), axis=1)
     # print(f"strong_index: {strong_index}")
@@ -163,34 +167,46 @@ for x, y in zip(X_train, Y_train):
 #print(f">> len: {len(Y_test)} labels: {Y_test}")
 
 #GLOBAL Evaluate
-# predicts = (np.sign(np.sum([alphas[i] * strong_gmms[i].predict(X_test[:, i]) for i in range(N_classifiers)])))
+predicts = []
+for i in range(N_classifiers):
+    predicts.append(alphas[i] * strong_gmms[i].predict(X_test[:, i]))
+predicts = np.transpose(predicts, (1, 0))
+if predicts.shape != (2*N_test, N_classifiers):
+    raise Exception(f"Shape of global predict is not right: {predicts.shape}")
+
+predicts = np.sign(np.sum(alphas * predicts, axis=1))
         
-# #print(f">> len: {len(predicts)} global predicts: {predicts}")
+#print(f">> len: {len(predicts)} global predicts: {predicts}")
 
-# dtr = detection_rate(Y_test, predicts)
-# flr = false_alarm_rate(Y_test, predicts)
+print("==============RESULT=================")
 
-# print(">> Global:")
-# print(f">> detection rate: {dtr}")
-# print(f">> false alarm rate: {flr}")
+dtr = detection_rate(Y_test, predicts)
+flr = false_alarm_rate(Y_test, predicts)
 
-# #Local Evaluate:
-# for local_index in range(N_classifiers):
-#     predicts = []
-#     for x in X_test:
-#         predicts.append(strong_gmms[local_index].predict(X_test[:, local_index]))
-#     dtr = detection_rate(Y_test, predicts)
-#     flr = false_alarm_rate(Y_test, predicts)
-#     print(f">> model: {local_index}")
-#     print(f"Detection rate: {dtr}")
-#     print(f"False alarm rate: {flr}")
-#     #print(f">> len: {len(predicts)} global predicts: {predicts}")
+print(f">> Global: dtr {dtr}, far {flr}")
+
+#Local Evaluate:
+for local_index in range(N_classifiers):
+    predicts = strong_gmms[local_index].predict(X_test[:, local_index])
+    dtr = detection_rate(Y_test, predicts)
+    flr = false_alarm_rate(Y_test, predicts)
+    print(f">> model {local_index}: dtr {dtr}, far {flr}")
+    
+#Visualize:
+print(">> Visualize after training ...")
+means = np.array([strong_gmms[i].means for i in range(N_classifiers)])
+stds = np.array([strong_gmms[i].stds for i in range(N_classifiers)])
+print(means.shape)
+print(stds.shape)
+plot_multi_norm_data(X_train, Y_train, means, stds)
     
 #Send model to global nodes
-model_dict = {}
-model_dict["node"] = 1
-for index, gmms in enumerate(strong_gmms):
-    model_dict[f"model_{index}"] = gmms.get_parameters()
-print(json.dumps(model_dict))
-send_model(model_dict)
+# model_dict = {}
+# model_dict["node"] = 1
+# model_dict["alphas"] = alphas.tolist()
+# for index, gmms in enumerate(strong_gmms):
+#     model_dict[f"model_{index}"] = gmms.get_parameters()
+# #print(json.dumps(model_dict))
+# send_model(model_dict)
+# print(">> Model has been sent!")
 

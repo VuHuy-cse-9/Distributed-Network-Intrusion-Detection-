@@ -3,7 +3,7 @@ import msgpack
 import json
 
 #Create new topic
-consumer = KafkaConsumer('model-local-global',
+consumer = KafkaConsumer('model-topic',
                         bootstrap_servers=['localhost:9092'],
                         value_deserializer=lambda m: json.loads(m.decode('ascii')))
 

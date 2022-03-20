@@ -134,9 +134,12 @@ class OnlineGMM:
             probs = []
             for class_index in range(self.n_labels):
                 probs.append(np.sum(self.weight[class_index] * self.predict_prob(x, class_index), axis=1))
-            probs = np.array(probs)
+            probs = np.transpose(probs, (1, 0))
             result = np.array(np.min(probs[:, 0, None] - (probs[:, 1:] / (self.n_labels - 1)), axis=1) > 0, np.int32) #(Nsamples,)
             result[result == 0] = -1
+            
+            if result.shape != (x.shape[0],):
+                raise Exception(f"Shape predict is not right: {result.shape}")
             return result
         else:
             probs = []
@@ -163,3 +166,11 @@ class OnlineGMM:
         self.means = np.array(model_para["means"], np.float64)
         self.stds = np.array(model_para["stds"], np.float64)
         self.weight = np.array(model_para["weights"], np.float64)
+        
+    def get_avg_means(self):
+        avg_means = np.mean(self.weight * self.means, axis=1)
+        return avg_means
+
+    def get_avg_stds(self):
+        avg_stds = np.mean(self.weight * self.stds, axis=1)
+        return avg_stds
