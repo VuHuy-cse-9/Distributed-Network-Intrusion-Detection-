@@ -20,7 +20,8 @@ data_producer = KafkaProducer(
 
 model_consumer = KafkaConsumer('model-topic',
                         bootstrap_servers=['localhost:9092'],
-                        value_deserializer=lambda m: json.loads(m.decode('ascii')))
+                        value_deserializer=lambda m: json.loads(m.decode('ascii')),
+                        auto_offset_reset="earliest")
 
 data_consumer = KafkaConsumer('data-topic',
                         bootstrap_servers=['localhost:9092'],
@@ -170,15 +171,17 @@ def split_train_test(X, y, ratio):
     
     return X_train, X_test, y_train, y_test
 
-def clone_model_from_local(N_nodes, N_classifiers):
+def clone_model_from_local(curr_nodeid, N_nodes, N_classifiers):
     model_params = _get_models()
     local_models = np.empty((N_nodes, N_classifiers), dtype=gmms.OnlineGMM)
     alphas = np.empty((N_nodes, N_classifiers))
     for node_index in range(N_nodes):
-        alphas[node_index] = np.array(model_params[node_index]["alphas"])
+        nodeid = int(model_params[node_index]["node"])
+        if nodeid == curr_nodeid: continue
+        alphas[nodeid] = np.array(model_params[node_index]["alphas"])
         for index in range(N_classifiers):
-            local_models[node_index, index] = gmms.OnlineGMM(hyper.std, n_components=hyper.n_components, T=1)
-            local_models[node_index, index].set_parameters(model_params[node_index][f"model_{index}"])
+            local_models[nodeid, index] = gmms.OnlineGMM(hyper.std, n_components=hyper.n_components, T=1)
+            local_models[nodeid, index].set_parameters(model_params[node_index][f"model_{index}"])
     print(">> Clone model from local: Done!")
     return local_models, alphas
 
