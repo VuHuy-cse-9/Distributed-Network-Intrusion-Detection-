@@ -1,8 +1,8 @@
 """Training GMMs using online Adaboost
 """
 import numpy as np
-from GMMs import gmms
-from GMMs import hyper
+import gmms
+import hyper
 from utils import detection_rate, false_alarm_rate, send_model, load_fake_data, send_data
 import json
 from tqdm import tqdm

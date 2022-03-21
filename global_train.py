@@ -1,9 +1,8 @@
 import numpy as np
 from sklearn.svm import SVC
 from utils import detection_rate, clone_data_from_local, clone_model_from_local, false_alarm_rate
-from GMMs import gmms
-from GMMs import hyper
-from ThreadWithResult import ThreadWithResult
+import gmms
+import hyper
 from visualize import plot_global_history
 from tqdm import tqdm
 

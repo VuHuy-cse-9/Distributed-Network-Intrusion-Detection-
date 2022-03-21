@@ -1,5 +1,5 @@
 #Data:
-N_features = 3
+N_features = 4
 #GMMS HYPERAMETER
 gamma = 5   #Equation (25)
 r = 0.3     #Equation (32)

@@ -1,4 +1,4 @@
-from GMMs.gmms import OnlineGMM
+from gmms import OnlineGMM
 import numpy as np
 import matplotlib.pyplot as plt
 import json

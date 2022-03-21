@@ -4,8 +4,8 @@ from kafka import KafkaConsumer
 from kafka.errors import KafkaError
 import msgpack
 import json
-from GMMs import hyper
-from GMMs import gmms
+import hyper
+import gmms
 
 #GLOBAL VARIABLES
 model_producer = KafkaProducer(
