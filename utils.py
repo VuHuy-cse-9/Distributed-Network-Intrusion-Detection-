@@ -69,7 +69,7 @@ def send_data(X, y):
         }
     )
     
-def get_models():
+def _get_models():
     count_nodes = hyper.N_nodes
     node_models = []
     print(">> Begin to clone model")
@@ -81,7 +81,7 @@ def get_models():
             break
     return node_models
 
-def get_data():
+def _get_data():
     """Get data from local nodes
     """
     count_data = hyper.N_data_global
@@ -94,10 +94,8 @@ def get_data():
         if count_data == 0:
             break
     X, y = np.array(X), np.array(y)
-    #print(f"X: {X}, y: {y}")
     if X.shape[0] != hyper.N_data_global or X.shape[0] != y.shape[0]:
-        raise Exception(f"Shape of X from get_data, utils is not right: {X.shape}, or not equal y: {y.shape}")
-    #print(f"X: {X}, y: {y}")
+        raise Exception(f"Shape of X from _get_data, utils is not right: {X.shape}, or not equal y: {y.shape}")
     return X, y
     
 
@@ -173,7 +171,7 @@ def split_train_test(X, y, ratio):
     return X_train, X_test, y_train, y_test
 
 def clone_model_from_local(N_nodes, N_classifiers):
-    model_params = get_models()
+    model_params = _get_models()
     local_models = np.empty((N_nodes, N_classifiers), dtype=gmms.OnlineGMM)
     alphas = np.empty((N_nodes, N_classifiers))
     for node_index in range(N_nodes):
@@ -185,7 +183,11 @@ def clone_model_from_local(N_nodes, N_classifiers):
     return local_models, alphas
 
 def clone_data_from_local(ratio=0.8):
-    X, y = get_data()
+    X, y = _get_data()
     X_train, X_test, y_train, y_test = split_train_test(X, y, ratio=0.8)
     print(">> Clone data from local: Done!")
     return X_train, X_test, y_train, y_test
+
+
+    
+    

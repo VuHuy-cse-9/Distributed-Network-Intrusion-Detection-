@@ -125,3 +125,48 @@ def plot_one_norm_data(X, y, means, stds):
                     hspace=0.4)
     
     plt.show()
+    
+def plot_global_history(history, N_iter, N_states):
+    Si_fits = np.array(history["Si_fit"])
+    Sg_fits = np.array(history["Sg_fit"])
+    Ls = np.array(history["L"])
+    dtrs = np.array(history["DETR"])
+    fars = np.array(history["FAR"])
+    
+    if Si_fits.shape != (N_iter, N_states):
+        raise Exception(f"Expect Si_fits to be {(N_iter, N_states)}, but have {Si_fits.shape}")
+    if Sg_fits.shape != (N_iter, ):
+        raise Exception(f"Expect Sg_fits to be {(N_iter, )}, but have {Sg_fits.shape}")
+    if Ls.shape != (N_iter, N_states):
+        raise Exception(f"Expect Ls to be {(N_iter, N_states)}, but have {Ls.shape}")
+    if dtrs.shape != (N_iter, N_states):
+        raise Exception(f"Expect dtrs to be {(N_iter, N_states)}, but have {dtrs.shape}")
+    if fars.shape != (N_iter, N_states):
+        raise Exception(f"Expect fars to be {(N_iter, N_states)}, but have {fars.shape}")
+
+    fig, axs = plt.subplots(nrows=3, ncols=1) 
+    axs[0].set_title("Best-fit, Global fit")
+    axs[0].plot(np.arange(N_iter), Sg_fits[:], linewidth=2, label="Global fitness")
+    for Q_index in range(N_states):
+        axs[0].plot(np.arange(N_iter), Si_fits[:, Q_index], linewidth=2, label=f"S{Q_index} fitness")
+    axs[0].legend(loc="upper right")  
+    
+    axs[1].set_title("Contributions of nodes in each states")
+    for Q_index in range(N_states):
+        axs[1].plot(np.arange(N_iter), Ls[:, Q_index], linewidth=2, label=f"L{Q_index}")
+    axs[1].legend(loc="upper right")  
+    
+    axs[2].set_title("Detection rate, False alarm rate")
+    for Q_index in range(N_states):
+        axs[2].plot(np.arange(N_iter), dtrs[:, Q_index], linewidth=2, label=f"dtr {Q_index}")
+        axs[2].plot(np.arange(N_iter), fars[:, Q_index], linewidth=2, label=f"far {Q_index}")
+    axs[2].legend(loc="upper right") 
+    
+    plt.subplots_adjust(left=0.1,
+                    bottom=0.1, 
+                    right=0.9, 
+                    top=0.9, 
+                    wspace=0.4, 
+                    hspace=0.4)
+    plt.legend()
+    plt.show()

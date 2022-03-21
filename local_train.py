@@ -9,7 +9,7 @@ from tqdm import tqdm
 from visualize import plot_multi_norm_data
 
 #Hyper:
-N_classifiers = 7   #Depend on number of feature
+N_classifiers = hyper.N_features   #Depend on number of feature
 r = hyper.r
 p = hyper.p
 P = hyper.P
@@ -24,7 +24,7 @@ T = 0.5
 
 #Load data:
 N_labels = 2
-N_train = 100
+N_train = 500
 N_test = 100
 print(">> Loading dataset ...")
 X_train, X_test, Y_train, Y_test = load_fake_data(N_train, N_test, N_classifiers)
@@ -53,28 +53,26 @@ for gmm in gmms:
     gmm.build(n_labels=N_labels)
     
 #Visualize:
-print(">> Visualize before training ...")
-means = np.array([gmms[i].means for i in range(N_classifiers)])
-stds = np.array([gmms[i].stds for i in range(N_classifiers)])
-print(means.shape)
-print(stds.shape)
-plot_multi_norm_data(X_train, Y_train, means, stds)
+# print(">> Visualize before training ...")
+# means = np.array([gmms[i].means for i in range(N_classifiers)])
+# stds = np.array([gmms[i].stds for i in range(N_classifiers)])
+# plot_multi_norm_data(X_train, Y_train, means, stds)
 
 print(">> Training")
 for x, y in tqdm(zip(X_train, Y_train), total=2*N_train):
 #Step 1: Update number of normal and attack sample
 #        and initialize weight for new sample
     #TODO: THIS IS JUST FOR DEMO
-    # if N_data_send_count > 0:
-    #     #Share data.
-    #     if y == 1 and N_normal_send > 0:
-    #         send_data(x.tolist(), int(y))
-    #         N_normal_send -= 1
-    #         N_data_send_count -= 1
-    #     if y < 0 and N_attack_send > 0:
-    #         send_data(x.tolist(), int(y))
-    #         N_attack_send -= 1
-    #         N_data_send_count -= 1
+    if N_data_send_count > 0:
+        #Share data.
+        if y == 1 and N_normal_send > 0:
+            send_data(x.tolist(), int(y))
+            N_normal_send -= 1
+            N_data_send_count -= 1
+        if y < 0 and N_attack_send > 0:
+            send_data(x.tolist(), int(y))
+            N_attack_send -= 1
+            N_data_send_count -= 1
     
     if y == 1:
         S_normal += 1
@@ -154,12 +152,15 @@ for x, y in tqdm(zip(X_train, Y_train), total=2*N_train):
     #Step 5.1: Calculate ensemble weight
     #print(f"C: {C}")
     #print(f"Omega: {Omega}")
-    alphas = beta * np.log(np.maximum((1 - epsilon) / (epsilon + eta), eta)) \
-            + (1 - beta) * np.log(np.maximum(C / (Omega), eta))
+    #MODIFY: Alphas has to greater than 0
+    alphas = np.maximum(beta * np.log(np.maximum((1 - epsilon) / (epsilon + eta), eta)) \
+            + (1 - beta) * np.log(np.maximum(C / (Omega), eta)), 0)
     #Step 5.2: Normalize ensemble weight
     #print("=============================================")
-    alphas = alphas / np.sum(alphas)
-    #print(f">> alphas: {alphas}")
+    if np.sum(alphas) != 0:
+        alphas = alphas / np.sum(alphas)
+    else:
+        alphas = np.ones((N_classifiers,)) * eta
     #Strong classifier:
     strong_gmms = gmms.copy()
     #np.sign(np.sum([alphas[i] * gmms[i](x) for i in range(N_classifiers)]))
@@ -193,20 +194,20 @@ for local_index in range(N_classifiers):
     print(f">> model {local_index}: dtr {dtr}, far {flr}")
     
 #Visualize:
-print(">> Visualize after training ...")
-means = np.array([strong_gmms[i].means for i in range(N_classifiers)])
-stds = np.array([strong_gmms[i].stds for i in range(N_classifiers)])
-print(means.shape)
-print(stds.shape)
-plot_multi_norm_data(X_train, Y_train, means, stds)
+# print(">> Visualize after training ...")
+# means = np.array([strong_gmms[i].means for i in range(N_classifiers)])
+# stds = np.array([strong_gmms[i].stds for i in range(N_classifiers)])
+# plot_multi_norm_data(X_train, Y_train, means, stds)
     
 #Send model to global nodes
-# model_dict = {}
-# model_dict["node"] = 1
-# model_dict["alphas"] = alphas.tolist()
-# for index, gmms in enumerate(strong_gmms):
-#     model_dict[f"model_{index}"] = gmms.get_parameters()
-# #print(json.dumps(model_dict))
-# send_model(model_dict)
-# print(">> Model has been sent!")
+model_dict = {}
+model_dict["node"] = 1
+model_dict["alphas"] = alphas.tolist()
+for index, gmms in enumerate(strong_gmms):
+    model_dict[f"model_{index}"] = gmms.get_parameters()
+#print(json.dumps(model_dict))
+send_model(model_dict)
+print(">> Model has been sent!")
 
+if (alphas > 1.0).any() or (alphas < -1.0).any():
+    print(f"ALphas larger than 1 or -1.0: {alphas}")

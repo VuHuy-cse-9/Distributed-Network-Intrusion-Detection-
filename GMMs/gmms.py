@@ -107,14 +107,14 @@ class OnlineGMM:
                 raise Exception(f"delta shape should be: {(self.n_labels, self.n_components)}, instead {delta.shape}")
             
             self.A[class_index] += delta
-            print(f">> delta: {delta}")
-            print(f">> A:  {self.A}")
+            #print(f">> delta: {delta}")
+            #print(f">> A:  {self.A}")
             
             # Step 4: Update parameters for each components
             self.means[class_index] = \
                     ((self.A[class_index] - delta) * self.means[class_index]  + delta * x) \
                     / self.A[class_index]
-            print(f">> means: {self.means}")
+            #print(f">> means: {self.means}")
             """
             CAUTION: EASILY TO OVERFLOW
             """  
