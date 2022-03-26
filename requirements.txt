@@ -1,0 +1,6 @@
+kafka-python
+pandas-msgpack
+cython
+scikit-learn
+tqdm
+argparse
