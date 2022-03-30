@@ -38,7 +38,7 @@ def plot_multi_norm_data(X, y, means, stds):
     """Plot multiple normal distribution graph
     Args:
         X (_array (N_samples, N_features)_): dataset
-        y (_N_features_): labels
+        y (_N_samples_): labels
         means (array_N_features, 2, n_components_): mean for each features
         stds (array_N_features, 2, n_components_): std for each features
     """
@@ -50,7 +50,7 @@ def plot_multi_norm_data(X, y, means, stds):
     
     
     if means.shape[1] != 2:
-        raise Exception(f"We only plot for two sample for now ")
+        raise Exception(f"We only plot for two labels for now ")
     
     if means.shape != stds.shape:
         raise Exception(f"Number of means {means.shape} different from stds {stds.shape} ")
@@ -99,7 +99,7 @@ def plot_one_norm_data(X, y, means, stds):
     
     
     if means.shape[1] != 2:
-        raise Exception(f"We only plot for two sample for now ")
+        raise Exception(f"We only plot for two labels for now ")
     
     if means.shape != stds.shape:
         raise Exception(f"Number of means {means.shape} different from stds {stds.shape} ")
