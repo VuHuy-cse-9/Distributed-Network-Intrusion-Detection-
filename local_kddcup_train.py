@@ -22,22 +22,22 @@ args = parser.parse_args()
 X_train, Y_train, labels_idx, labels, _ = get_data(hyper.path_train, hyper.category_features, hyper.skew_features, int(args.option))
 
 #For testing only
-X_train_normal = X_train[Y_train == 1][:10000, :]
-X_train_1 = X_train[Y_train == -1][:8000, :]
-X_train_2 = X_train[Y_train == -2][:8000, :]
-X_train_3 = X_train[Y_train == -3][:8000, :]
-X_train_4 = X_train[Y_train == -4][:8000, :]
-Y_train_normal = Y_train[Y_train == 1][:10000]
-Y_train_1 = Y_train[Y_train == -1][:8000]
-Y_train_2 = Y_train[Y_train == -2][:8000]
-Y_train_3 = Y_train[Y_train == -3][:8000]
-Y_train_4 = Y_train[Y_train == -4][:8000]
-X_train = np.concatenate((X_train_normal, X_train_1, X_train_2, X_train_3, X_train_4), axis=0)
-Y_train = np.concatenate((Y_train_normal, Y_train_1, Y_train_2, Y_train_3, Y_train_4), axis=0)
-array_index = np.arange(len(Y_train))
-np.random.shuffle(array_index)
-X_train = X_train[array_index,:]
-Y_train = Y_train[array_index]
+# X_train_normal = X_train[Y_train == 1][:10000, :]
+# X_train_1 = X_train[Y_train == -1][:8000, :]
+# X_train_2 = X_train[Y_train == -2][:8000, :]
+# X_train_3 = X_train[Y_train == -3][:8000, :]
+# X_train_4 = X_train[Y_train == -4][:8000, :]
+# Y_train_normal = Y_train[Y_train == 1][:10000]
+# Y_train_1 = Y_train[Y_train == -1][:8000]
+# Y_train_2 = Y_train[Y_train == -2][:8000]
+# Y_train_3 = Y_train[Y_train == -3][:8000]
+# Y_train_4 = Y_train[Y_train == -4][:8000]
+# X_train = np.concatenate((X_train_normal, X_train_1, X_train_2, X_train_3, X_train_4), axis=0)
+# Y_train = np.concatenate((Y_train_normal, Y_train_1, Y_train_2, Y_train_3, Y_train_4), axis=0)
+# array_index = np.arange(len(Y_train))
+# np.random.shuffle(array_index)
+# X_train = X_train[array_index,:]
+# Y_train = Y_train[array_index]
 
 #Summerize data:
 print("=====================LOCAL DATA SUMMARY=========================")
