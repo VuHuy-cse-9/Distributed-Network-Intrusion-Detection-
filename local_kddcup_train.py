@@ -2,7 +2,7 @@ from models.NewOnlineAdaboost import NewOnlineAdaboost
 from models.PSOSVM import PSOSVMTrainer
 from DataGenerator.DataGenerator import get_data
 import hyper
-from utils import detection_rate, false_alarm_rate, send_model, send_data, clone_model_from_local
+from utils import detection_rate, false_alarm_rate, send_model, clone_model_from_local, get_model_dict
 from visualize import plot_multi_norm_data, plot_global_history
 
 import json
@@ -14,39 +14,46 @@ from sklearn.svm import SVC
 
 #ARGUMENTS:
 parser = argparse.ArgumentParser(description='Distributed Intrusion Detection')
-parser.add_argument('--nodeid', default=1.0, type=int, help='Node"s id')
+parser.add_argument('--nodeid', default=1, type=int, help='Node"s id')
+parser.add_argument('--option', default=1, type=int, help='Option for data preprocessing, 0 for category-continous converting, 1 for removing category features.')
 args = parser.parse_args()
 
-#Hyper:
-#N_classifiers = hyper.n_features
-#Load fake data:
-# N_labels, N_train, N_test = 2, 500, 100
-# print(">> Loading dataset ...")
-# X_train, X_test, Y_train, Y_test = load_fake_data(N_train, N_test, N_classifiers)
-# N_train = N_train * 2 #JUST FOR TEMPORARY
-# N_test = N_test * 2
-
 #Load data:
-X_train, Y_train, labels_idx, labels = get_data(hyper.path_train, hyper.category_features, 1)
+X_train, Y_train, labels_idx, labels, _ = get_data(hyper.path_train, hyper.category_features, hyper.skew_features, int(args.option))
+
+#For testing only
+X_train_normal = X_train[Y_train == 1][:10000, :]
+X_train_1 = X_train[Y_train == -1][:8000, :]
+X_train_2 = X_train[Y_train == -2][:8000, :]
+X_train_3 = X_train[Y_train == -3][:8000, :]
+X_train_4 = X_train[Y_train == -4][:8000, :]
+Y_train_normal = Y_train[Y_train == 1][:10000]
+Y_train_1 = Y_train[Y_train == -1][:8000]
+Y_train_2 = Y_train[Y_train == -2][:8000]
+Y_train_3 = Y_train[Y_train == -3][:8000]
+Y_train_4 = Y_train[Y_train == -4][:8000]
+X_train = np.concatenate((X_train_normal, X_train_1, X_train_2, X_train_3, X_train_4), axis=0)
+Y_train = np.concatenate((Y_train_normal, Y_train_1, Y_train_2, Y_train_3, Y_train_4), axis=0)
+array_index = np.arange(len(Y_train))
+np.random.shuffle(array_index)
+X_train = X_train[array_index,:]
+Y_train = Y_train[array_index]
 
 #Summerize data:
 print("=====================LOCAL DATA SUMMARY=========================")
 print(f"Number of samples {X_train.shape[0]}, Number of features: {X_train.shape[1]}")
 print(f"Train: Number of normal {np.sum(Y_train == 1)}, Number of attack {np.sum(Y_train == -1)}")
-print(f"Number of labels: {len(labels_idx)}")
+print(f"Number of labels: {print(np.unique(labels_idx))}")
+print(f"Number of : {len(Y_train[Y_train == -1])}")
+print(f"Number of : {len(Y_train[Y_train == -2])}")
+print(f"Number of : {len(Y_train[Y_train == -3])}")
+print(f"Number of : {len(Y_train[Y_train == -4])}")
 print("=================================================================")
 #Prepare model
 print(f">> Prepare model and trainer ....")
 local_trainer = NewOnlineAdaboost()
 local_trainer.build(n_labels = hyper.n_labels, n_features=hyper.n_features) 
     
-#Visualize:
-print(">> Visualize before training ...")
-# gmms = local_trainer.gmms
-# means = np.array([gmms[i].means for i in range(N_classifiers)])
-# stds = np.array([gmms[i].stds for i in range(N_classifiers)])
-# plot_multi_norm_data(X_train, Y_train, means, stds)
-
 print(">> Training local model ...")
 local_trainer.fit(X_train, Y_train)
 
@@ -54,23 +61,12 @@ local_trainer.fit(X_train, Y_train)
 strong_gmms = local_trainer.strong_gmms
 alphas = local_trainer.alphas 
     
-#Visualize:
-print(">> Visualize after training ...")
-# means = np.array([strong_gmms[i].means for i in range(N_classifiers)])
-# stds = np.array([strong_gmms[i].stds for i in range(N_classifiers)])
-# plot_multi_norm_data(X_train, Y_train, means, stds)
-    
 #Send model to global nodes
-print(">> Sending model to other nodes ...")
+print(">> Saving model ...")
 nodeid = int(args.nodeid)
-model_dict = {}
-model_dict["node"] = nodeid
-model_dict["alphas"] = alphas.tolist()
-for index, gmms in enumerate(strong_gmms):
-    model_dict[f"model_{index}"] = gmms.get_parameters()
-    
+model_dict = get_model_dict(nodeid, strong_gmms, alphas)
 params = json.dumps(model_dict)
-with open("model.json", "w") as outfile:
+with open(f"checkpoint/local/kdd/local_model{nodeid}.json", "w") as outfile:
     outfile.write(params)
 
     

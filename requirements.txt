@@ -1,6 +1,10 @@
 kafka-python
-pandas-msgpack
+msgpack
 cython
 scikit-learn
 tqdm
 argparse
+numpy
+matplotlib
+pandas
+pickle

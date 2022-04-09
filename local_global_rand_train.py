@@ -1,6 +1,6 @@
 from DataGenerator.DataGenerator import get_data
 import hyper
-from utils import detection_rate, false_alarm_rate, send_model, send_data, clone_model_from_local
+from utils import detection_rate, false_alarm_rate, send_model, clone_model_from_local, get_model_dict
 from DataGenerator.DataGenerator import load_fake_data
 from visualize import plot_multi_norm_data, plot_global_history
 from models.NewOnlineAdaboost import NewOnlineAdaboost
@@ -11,6 +11,8 @@ import json
 from tqdm import tqdm
 import argparse
 from sklearn.svm import SVC
+
+import pickle
 
 #ARGUMENTS:
 parser = argparse.ArgumentParser(description='Distributed Intrusion Detection')
@@ -67,19 +69,18 @@ plot_multi_norm_data(X_train, Y_train, means, stds)
 #Send model to global nodes
 print(">> Sending model to other nodes ...")
 nodeid = int(args.nodeid)
-model_dict = {}
-model_dict["node"] = nodeid
-model_dict["alphas"] = alphas.tolist()
-for index, gmms in enumerate(strong_gmms):
-    model_dict[f"model_{index}"] = gmms.get_parameters()
-#print(json.dumps(model_dict))
+model_dict = get_model_dict(nodeid, strong_gmms, alphas)
 send_model(model_dict)
 print(">> Model has been sent!")
 
 print(f">> Waiting for receiving other models ...")
-local_models, global_alphas = clone_model_from_local(curr_nodeid=nodeid, N_nodes=hyper.N_nodes, N_classifiers=hyper.n_features)
-local_models[nodeid] = strong_gmms
+strong_gmms_list, global_alphas = clone_model_from_local(curr_nodeid=nodeid, N_nodes=hyper.N_nodes, N_classifiers=hyper.n_features)
+strong_gmms_list[nodeid] = strong_gmms
 global_alphas[nodeid] = alphas
+local_models = [None] * hyper.N_nodes
+for i in range(hyper.N_nodes):
+    local_models[i] = NewOnlineAdaboost()
+    local_models[i].set_params(strong_gmms_list[i], global_alphas[i], hyper.n_features)
 
 print(f">> Prepare for global dataset ...")
 #Select attack sample
@@ -109,6 +110,29 @@ N_iter = hyper.N_iter
     
 print(">> Training ....")
 global_trainer = PSOSVMTrainer()
-global_trainer.build(local_models, global_alphas)
+global_trainer.build(local_models)
 history = global_trainer.fit(X_train, Y_train, X_test, Y_test)
-plot_global_history(history=history, N_iter=N_iter, N_states=Q)
+
+local_models = global_trainer.local_models
+
+print("Saving model ....")
+state = global_trainer.Sg
+svc = global_trainer.global_svc
+state_dict =  {"state": state.tolist()}
+with open(f"checkpoint/global/rand/state.json", "w") as outfile:
+    outfile.write(json.dumps(state_dict))
+
+with open(f"checkpoint/global/rand/history.json", "w") as outfile:
+    outfile.write(json.dumps(history))
+    
+# save
+with open('checkpoint/global/rand/svm.pkl','wb') as f:
+    pickle.dump(svc,f)
+    
+local_models = global_trainer.local_models
+for i in range(len(local_models)):
+    #Save model params
+    model_dict = get_model_dict(i, local_models[i].strong_gmms, local_models[i].alphas)
+    params = json.dumps(model_dict)
+    with open(f"checkpoint/global/rand/model{i}.json", "w") as outfile:
+        outfile.write(params)

@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.svm import SVC
-from utils import detection_rate, clone_data_from_local, clone_model_from_local, false_alarm_rate
+from utils import detection_rate, clone_model_from_local, false_alarm_rate
 import hyper
 from visualize import plot_global_history
 from tqdm import tqdm
@@ -19,15 +19,20 @@ class PSOSVMTrainer():
         self.c1, self.c2 = hyper.c1, hyper.c2
         self.u1, self.u2 = hyper.u1, hyper.u2
         
-    def build(self, local_models, alphas):
+    def build(self, local_models):
+        """_summary_
+
+        Args:
+            local_models (_array-like OnlineAdaboost (N_nodes, ))
+        """
         self.Sg = np.zeros([self.N_nodes,])         #Best global state of every particles
+        self.global_svc = None
         self.Si = None                           #Best state of particles, equation (35)
         self.Si_fit = None                          #Fitness value of best state of particles
         self.svcs = []
         for Q_index in range(self.Q):
             self.svcs.append(SVC(kernel = 'rbf', C = 1e5))#Every states have a private support vector machine
         self.local_models = local_models
-        self.alphas = alphas
         
     def data_to_vector(self, Data, X_state):
         """ Transform raw data into feature vector using Local models
@@ -42,11 +47,7 @@ class PSOSVMTrainer():
             L = len(selected_node_indexs)
             r = np.zeros((L, Data.shape[0]))
             for index, node_index in enumerate(selected_node_indexs):
-                print(f"node_index: {node_index}")
-                r[index] = \
-                    np.sum([self.alphas[node_index, i] * \
-                        self.local_models[node_index, i].predict(Data[:, i]) 
-                            for i in range(self.N_classifiers)], axis=0)
+                r[index] = self.local_models[node_index].predict_score(Data)
             r = np.transpose(r, (1, 0))
             rs.append(r)
         return rs
@@ -89,7 +90,7 @@ class PSOSVMTrainer():
             #MODIFY: L(int) to L(weight) in (34)
             L_weight = np.sum(X_state, axis=1)
 
-            history["L"].append(L_weight)
+            history["L"].append(L_weight.tolist())
             
             if L_weight.shape != (self.Q,):
                 raise Exception(f"Expect L_weight has shape {(self.Q, )}, instead {L_weight.shape}") 
@@ -116,8 +117,8 @@ class PSOSVMTrainer():
                                     predicts
                                 )       
             
-            history["DETR"].append(dtr)
-            history["FAR"].append(far)
+            history["DETR"].append(dtr.tolist())
+            history["FAR"].append(far.tolist())
             #Calculate fitness & Update best state
             X_fit = self.fitness_function(dtr, L=L_weight)
             if X_fit.shape != (self.Q,):
@@ -134,12 +135,15 @@ class PSOSVMTrainer():
                 raise Exception(f"Expect Si has shape {(self.Q, self.N_nodes)}, instead {self.Si.shape}")
                         
             #Update global state:
-            self.Sg = self.Si[np.argmax(self.Si_fit)]
-            Sg_fit = self.Si_fit[np.argmax(self.Si_fit)]
+            idx = np.argmax(self.Si_fit)
+            self.Sg = self.Si[idx]
+            self.global_svc = self.svcs[idx]
+            Sg_fit = self.Si_fit[idx]
+            
             if self.Sg.shape != (self.N_nodes,):
                 raise Exception(f"Expect Sg has shape {(self.N_nodes,)}, instead {self.Sg.shape}")
             
-            history["Si_fit"].append(self.Si_fit)
+            history["Si_fit"].append(self.Si_fit.tolist())
             history["Sg_fit"].append(Sg_fit)
             
             for Q_index in range(self.Q):
@@ -150,4 +154,36 @@ class PSOSVMTrainer():
                 #Evolve particle state
                 X_state[Q_index] += Vi[Q_index]
         return history
+
+    def set_params(self, svc, global_state, local_models):
+        """_summary_
+
+        Args:
+            svc (_slklearn svm_): trained support vector machine 
+            global_state (_array-like (N_classifier, )_): global particle state
+            local_models (_array-like (N_nodes, )_): Online Adaboost for all nodes
+        """
+        self.global_svc = svc
+        self.Sg = np.array(global_state)
+        self.local_models = local_models
+    
+    def predict(self, X_test):
+        selected_node_indexs = np.squeeze(np.argwhere(self.Sg > 0))
+        L = len(selected_node_indexs)
+        r = np.zeros((L, X_test.shape[0]))
+        for index, node_index in enumerate(selected_node_indexs):
+            r[index] = self.local_models[node_index].predict_score(X_test)
+        r = np.transpose(r, (1, 0))
+        y = self.global_svc.predict(r)
+        return y
+    
+    def evaluate(self, X_test, Y_test):
+        #Global evaluate:
+        y = self.predict(X_test)
+
+        #Global result
+        dtr = detection_rate(Y_test, y)
+        far = false_alarm_rate(Y_test, y)
+        
+        return dtr, far
         
