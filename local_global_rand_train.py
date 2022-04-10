@@ -75,8 +75,9 @@ strong_gmms_list[nodeid] = strong_gmms
 global_alphas[nodeid] = alphas
 local_models = []
 for i in range(hyper.N_nodes):
-    local_models = NewOnlineAdaboost()
-    local_models.set_params(strong_gmms_list[i], global_alphas[i], hyper.n_features)
+    local_model = NewOnlineAdaboost()
+    local_model.set_params(strong_gmms_list[i], global_alphas[i], hyper.n_features)
+    local_models.append(local_model)
 local_models = np.array(local_models)
 
 def get_random_index_array(N):
@@ -106,11 +107,24 @@ X_global_train, Y_global_train = select_global_data(X_train, Y_train, hyper.n_la
 X_global_test, Y_global_test = select_global_data(X_train, Y_train, hyper.n_labels - 1, N_test_global_sample)
 
 print("=====================GLOBAL DATA SUMMARY=========================")
-print(f"Number of samples: {X_global_train.shape[0]}")
-print(f"Number of features: {X_global_train.shape[1]}")
-print(f"Labels: {np.unique(Y_global_label)}")
-print(f"Number of normal data in global: {np.sum(Y_global_label == 1)}")
-print(f"Number of attack data in global: {np.sum(Y_global_label <= -1)}")
+print(f"Number of train samples {X_global_train.shape[0]}, Number of features: {X_global_train.shape[1]}")
+print(f"Number of test samples {X_global_test.shape[0]}, Number of features: {X_global_test.shape[1]}")
+print(f"TRAIN: Number of normal {np.sum(Y_global_train == 1)}, Number of attack {np.sum(Y_global_train <= -1)}")
+print(f"Number of labels: {np.unique(Y_global_train).shape[0]}")
+print(f"Number of : {len(Y_global_train[Y_global_train == -1])}")
+print(f"Number of : {len(Y_global_train[Y_global_train == -2])}")
+print(f"Number of : {len(Y_global_train[Y_global_train == -3])}")
+print(f"Number of : {len(Y_global_train[Y_global_train == -4])}")
+print(f"Number of : {len(Y_global_train[Y_global_train == -5])}")
+print("-------------------------------------------------------------")
+print(f"TEST: Number of normal {np.sum(Y_global_test == 1)}, Number of attack {np.sum(Y_global_test <= -1)}")
+print(f"Number of labels: {np.unique(Y_global_test).shape[0]}")
+print(f"Number of : {len(Y_global_test[Y_global_test == -1])}")
+print(f"Number of : {len(Y_global_test[Y_global_test == -2])}")
+print(f"Number of : {len(Y_global_test[Y_global_test == -3])}")
+print(f"Number of : {len(Y_global_test[Y_global_test == -4])}")
+print(f"Number of : {len(Y_global_test[Y_global_test == -5])}")
+print("=================================================================")
 
 #Hyperameter
 N_nodes = hyper.N_nodes

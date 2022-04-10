@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.svm import SVC
-from utils import clone_model_from_local
+from utils import clone_model_from_local, detection_rate, false_alarm_rate
 import hyper
 from visualize import plot_global_history
 from tqdm import tqdm
@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 class PSOSVMTrainer():
     def __init__(self):
-        self.Vmax = hyper.V_max
+        #self.Vmax = hyper.V_max
         self.Q = hyper.N_states
         self.N_nodes = hyper.N_nodes
         self.tau = hyper.tau
@@ -80,9 +80,11 @@ class PSOSVMTrainer():
             "DETR": [],                             #Detection rate (N_iter, N_states)
             "FAR": []                               #False alarm rate (N_iter, N_states)
         }
+        #CONVERT LABEL TO -1, 1
+        Y_train = np.array(np.clip(Y_train, -1, 1), dtype=np.int32)
+        Y_val = np.array(np.clip(Y_val, -1, 1), dtype=np.int32)
         #BUG: TWO self.Q MAY HAVE SAME STATES!  
         X_state = np.clip(np.random.normal(loc=0.25, scale=0.5, size=(self.Q, self.N_nodes)), 1e-5, 1.0)
-        X_state = X_state  * (X_state > 0)
         self.Si = X_state
         Vi = np.zeros((self.Q, self.N_nodes))  #Velocities of each particles, equation (37)
         
@@ -146,6 +148,7 @@ class PSOSVMTrainer():
             history["Si_fit"].append(self.Si_fit.tolist())
             history["Sg_fit"].append(Sg_fit)
             
+            self.w = (self.w - 0.4) * (self.N_iter - step) / self.N_iter + 0.4
             for Q_index in range(self.Q):
                 #Calculate velocities
                 Vi[Q_index] = self.constraint_velocity(

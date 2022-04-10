@@ -37,7 +37,7 @@ with open(f"checkpoint/local/kdd/local_model{nodeid}.json", "rb") as file:
     
 print(">> Loading test dataset")
 #====================================================================================
-X_test, Y_test, labels_idx, labels, feature_names = get_data(hyper.path_test, hyper.category_features, None, int(args.option))
+X_test, Y_test, labels_idx, labels, feature_names = get_data(hyper.path_test, hyper.category_features, hyper.skew_features, int(args.option))
 
 print("=====================TEST DATA SUMMARY=========================")
 print(f"Number of samples {X_test.shape[0]}, Number of features: {X_test.shape[1]}")

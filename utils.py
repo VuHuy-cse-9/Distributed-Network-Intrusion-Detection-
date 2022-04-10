@@ -11,7 +11,7 @@ from models.GMM import OnlineGMM
 
 def get_kafka_producer():
     return KafkaProducer(
-        bootstrap_servers=["localhost:9092"],
+        bootstrap_servers=[hyper.boot_strap_server],
         value_serializer=lambda m: json.dumps(m).encode('ascii')
     )
 
@@ -21,7 +21,7 @@ def get_kafka_producer():
 # )
 def get_kafka_consumer():
     return KafkaConsumer('model-topic',
-                            bootstrap_servers=['localhost:9092'],
+                            bootstrap_servers=[hyper.boot_strap_server],
                             value_deserializer=lambda m: json.loads(m.decode('ascii')),
                             auto_offset_reset="earliest")
 
