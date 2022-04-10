@@ -26,7 +26,7 @@ class OnlineGMM:
             n_features (_int_): _number of features
         """
         self.n_labels = n_labels
-        self.means = np.random.normal(loc=0, scale=1, size=(self.n_labels, self.n_components))
+        self.means = np.random.normal(loc=0, scale=5, size=(self.n_labels, self.n_components))
         self.stds = np.ones((n_labels, self.n_components))
         self.weight = np.ones((n_labels, self.n_components))
         self.N = np.ones((self.n_labels, self.n_components), dtype=np.int32)
@@ -56,9 +56,8 @@ class OnlineGMM:
         
         # Step 2: Calculate the relation between (x, y)
         probs = self.weight[class_index] * self.predict_prob_all(x, class_index) * Tau
-        probs[probs > 0] = -1 * self.epsilon 
         Z = np.sum(probs)
-        if Z != 0:      
+        if Z > 0:      
             # Step 3: Calculate the probability that (x, y) 
             # belongs to the ith component of the GMM.
             delta = probs / Z
@@ -90,12 +89,14 @@ class OnlineGMM:
         if class_index == None: #For Set of sample and non specify class
             stds = self.stds.flatten()[None, :]
             means = self.means.flatten()[None, :]
-            result = -np.log(np.abs(stds)) - np.log(np.sqrt(2 * np.pi)) + \
-                     -0.5 * ((x - means) / stds) ** 2 
+            # result = -np.log(np.abs(stds)) - np.log(np.sqrt(2 * np.pi)) + \
+            #          -0.5 * ((x - means) / stds) ** 2 
+            result = 1 / (stds * np.sqrt(2 * np.pi)) * ( np.exp(-0.5 * ((x - means) / stds) ** 2))
             result = result.reshape((x.shape[0],self.n_labels, self.n_components))
             return result
-        return -np.log(np.abs(self.stds[class_index])) - np.log(np.sqrt(2 * np.pi)) + \
-                     -0.5 * ((x - self.means[class_index]) / self.stds[class_index]) ** 2 
+        return 1 / (self.stds[class_index] * np.sqrt(2 * np.pi)) * ( np.exp(-0.5 * ((x - self.means[class_index]) / self.stds[class_index]) ** 2))
+        # return -np.log(np.abs(self.stds[class_index])) - np.log(np.sqrt(2 * np.pi)) + \
+        #              -0.5 * ((x - self.means[class_index]) / self.stds[class_index]) ** 2 
                     
     def predict_prob(self, x):
         if np.isscalar(x):
@@ -111,7 +112,7 @@ class OnlineGMM:
         else:
             N_samples = x.shape[0]
         probs = self.predict_prob(x)
-        result = np.array(np.min(probs[:, 0][:, None] - (probs[:, 1:]), axis=1) > 0, np.int32) #(Nsamples,)
+        result = np.array(np.min(probs[:, 0][:, None] - (probs[:, 1:]) / (self.n_labels - 1), axis=1) > 0, np.int32) #(Nsamples,)
         result[result == 0] = -1
         return result
         

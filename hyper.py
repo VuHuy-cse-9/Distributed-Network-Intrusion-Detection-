@@ -9,14 +9,14 @@ n_labels = 5
 # n_labels = 2
 #GMMS HYPERAMETER
 gamma = 10   #Equation (25)
-r = 0.3     #Equation (32)
+r = 0.5     #Equation (32)
 p = 0.1     #Equation (23)
 beta = 0.8  #Equation (29)  
 std = 1.0   #Equation (15)
-n_components = 2
+n_components = 4
 T = 0.5
 #LOCAL HYPERAMTER
-P = 12      #predefined maximum number of iterations
+P = 8      #predefined maximum number of iterations
             #Equation (25)
 #GLOBAL HYPERAMETER
 N_states = 3
@@ -33,12 +33,12 @@ category_features = [
     "protocol_type",
     "service",
     "flag",
-    #"land",
-    #"logged_in",
-    #"is_host_login",
-    #"is_guest_login",
-    #"num_access_files",
-    #"num_failed_logins",
+    "land",
+    "logged_in",
+    "is_host_login",
+    "is_guest_login",
+    "num_access_files",
+    "num_failed_logins",
 ]
 
 

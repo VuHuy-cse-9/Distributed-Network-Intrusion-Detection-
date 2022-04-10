@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.svm import SVC
-from utils import detection_rate, clone_model_from_local, false_alarm_rate
+from utils import clone_model_from_local
 import hyper
 from visualize import plot_global_history
 from tqdm import tqdm
@@ -176,14 +176,3 @@ class PSOSVMTrainer():
         r = np.transpose(r, (1, 0))
         y = self.global_svc.predict(r)
         return y
-    
-    def evaluate(self, X_test, Y_test):
-        #Global evaluate:
-        y = self.predict(X_test)
-
-        #Global result
-        dtr = detection_rate(Y_test, y)
-        far = false_alarm_rate(Y_test, y)
-        
-        return dtr, far
-        

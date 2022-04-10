@@ -106,8 +106,8 @@ def plot_multi_norm_data(X, y, means, stds, label_indexs, label_names, feature_n
         for row in range(nrows): 
             for col in range(2):
                 if 2*row + col >= X.shape[1]: break; 
-                findex = 2*row + col
-                axs[row, col].set_title(f"{feature_names[findex + idx]}")
+                findex = 2*row + col + idx
+                axs[row, col].set_title(f"{feature_names[findex]}")
                 for lindex, label_index, label in zip(range(hyper.n_labels), labels_index, label_names):
                     for cmp_index in range(hyper.n_components):
                         samples1 = np.linspace(means[findex, lindex, cmp_index] - 3*stds[findex, lindex, cmp_index], means[findex, lindex, cmp_index] + 3*stds[findex, lindex, cmp_index], 100)

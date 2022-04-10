@@ -11,6 +11,7 @@ from tqdm import tqdm
 import argparse
 from sklearn.svm import SVC
 from utils import get_model_dict
+import os.path
 
 
 #ARGUMENTS:
@@ -21,7 +22,7 @@ args = parser.parse_args()
 #Hyper:
 N_classifiers = hyper.n_features
 #Load fake data:
-N_labels, N_train, N_test = 2, 2000, 500
+N_labels, N_train, N_test = 2, 5000, 200
 print(">> Loading dataset ...")
 X_train, X_test, Y_train, Y_test = load_fake_data(N_train, N_test, N_classifiers)
 N_train = N_train * 2 #JUST FOR TEMPORARY
@@ -39,10 +40,10 @@ local_trainer.build(n_labels = hyper.n_labels, n_features=hyper.n_features)
     
 #Visualize:
 print(">> Visualize before training ...")
-gmms = local_trainer.gmms
-means = np.array([gmms[i].means for i in range(N_classifiers)])
-stds = np.array([gmms[i].stds for i in range(N_classifiers)])
-plot_one_data_multi_norm(None, None, means, stds)
+# gmms = local_trainer.gmms
+# means = np.array([gmms[i].means for i in range(N_classifiers)])
+# stds = np.array([gmms[i].stds for i in range(N_classifiers)])
+# plot_one_data_multi_norm(None, None, means, stds)
 
 print(">> Training local model ...")
 local_trainer.fit(X_train, Y_train)
@@ -68,8 +69,15 @@ print(">> Saving model ...")
 nodeid = int(args.nodeid)
 model_dict = get_model_dict(nodeid, strong_gmms, alphas)
 params = json.dumps(model_dict)
-with open(f"checkpoint/local/rand/local_model{nodeid}.json", "w") as outfile:
-    outfile.write(params)
+
+if os.path.exists(f"checkpoint/local/rand/local_model{nodeid}.json"):
+    with open(f"checkpoint/local/rand/local_model{nodeid}.json", "w") as outfile:
+        outfile.write(params)
+else:
+    with open(f"checkpoint/local/rand/local_model{nodeid}.json", "x") as outfile:
+        outfile.write(params)
+    
+
 
 
     

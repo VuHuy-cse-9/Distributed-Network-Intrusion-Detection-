@@ -10,6 +10,7 @@ import numpy as np
 from tqdm import tqdm
 import argparse
 from sklearn.svm import SVC
+import os.path
 
 
 #ARGUMENTS:
@@ -19,16 +20,16 @@ parser.add_argument('--option', default=1, type=int, help='Option for data prepr
 args = parser.parse_args()
 
 #Load data:
-X_train, Y_train, labels_idx, labels, _ = get_data(hyper.path_train, hyper.category_features, hyper.skew_features, int(args.option))
+X_train, Y_train, labels_idx, labels, _ = get_data(hyper.path_train, hyper.category_features, None, int(args.option))
 
 #For testing only
-# X_train_normal = X_train[Y_train == 1][:10000, :]
-# X_train_1 = X_train[Y_train == -1][:8000, :]
+# X_train_normal = X_train[Y_train == 1][:8000, :]
+# X_train_1 = X_train[Y_train == -1][:15000, :]
 # X_train_2 = X_train[Y_train == -2][:8000, :]
 # X_train_3 = X_train[Y_train == -3][:8000, :]
 # X_train_4 = X_train[Y_train == -4][:8000, :]
-# Y_train_normal = Y_train[Y_train == 1][:10000]
-# Y_train_1 = Y_train[Y_train == -1][:8000]
+# Y_train_normal = Y_train[Y_train == 1][:8000]
+# Y_train_1 = Y_train[Y_train == -1][:15000]
 # Y_train_2 = Y_train[Y_train == -2][:8000]
 # Y_train_3 = Y_train[Y_train == -3][:8000]
 # Y_train_4 = Y_train[Y_train == -4][:8000]
@@ -66,7 +67,12 @@ print(">> Saving model ...")
 nodeid = int(args.nodeid)
 model_dict = get_model_dict(nodeid, strong_gmms, alphas)
 params = json.dumps(model_dict)
-with open(f"checkpoint/local/kdd/local_model{nodeid}.json", "w") as outfile:
-    outfile.write(params)
+
+if os.path.exists(f"checkpoint/local/kdd/local_model{nodeid}.json"):
+    with open(f"checkpoint/local/kdd/local_model{nodeid}.json", "w") as outfile:
+        outfile.write(params)
+else:
+    with open(f"checkpoint/local/kdd/local_model{nodeid}.json", "x") as outfile:
+        outfile.write(params)
 
     
