@@ -1,23 +1,35 @@
 import numpy as np
 from sklearn.svm import SVC
 from utils import clone_model_from_local, detection_rate, false_alarm_rate
-import hyper
 from visualize import plot_global_history
 from tqdm import tqdm
 
 
 class PSOSVMTrainer():
-    def __init__(self):
-        #self.Vmax = hyper.V_max
-        self.Q = hyper.N_states
-        self.N_nodes = hyper.N_nodes
-        self.tau = hyper.tau
-        self.N_classifiers = hyper.n_features
-        self.N_iter = hyper.N_iter
-        self.eta = 1e-5
-        self.w = hyper.w                        #inertia weight
-        self.c1, self.c2 = hyper.c1, hyper.c2
-        self.u1, self.u2 = hyper.u1, hyper.u2
+    def __init__(self,
+                 N_states,
+                 N_nodes,
+                 tau,
+                 n_features,
+                 N_iter,
+                 inertia_weight_mode,
+                 c1,
+                 c2,
+                 u1,
+                 u2,
+                 V_max,
+                 eta=1e-5):
+        self.Q = N_states
+        self.N_nodes = N_nodes  
+        self.tau = tau
+        self.N_classifiers = n_features
+        self.N_iter = N_iter
+        self.inertia_weight_mode = inertia_weight_mode
+        self.w = 1.4         
+        self.c1, self.c2 = c1, c2
+        self.u1, self.u2 = u1, u2
+        self.eta = eta
+        self.Vmax = V_max
         
     def build(self, local_models):
         """_summary_
@@ -43,7 +55,7 @@ class PSOSVMTrainer():
         """
         rs = []
         for x_state in X_state:
-            selected_node_indexs = np.squeeze(np.argwhere(x_state > 0))
+            selected_node_indexs = np.squeeze(np.argwhere(x_state > 0), axis=1)
             L = len(selected_node_indexs)
             r = np.zeros((L, Data.shape[0]))
             for index, node_index in enumerate(selected_node_indexs):
@@ -148,7 +160,8 @@ class PSOSVMTrainer():
             history["Si_fit"].append(self.Si_fit.tolist())
             history["Sg_fit"].append(Sg_fit)
             
-            self.w = (self.w - 0.4) * (self.N_iter - step) / self.N_iter + 0.4
+            if self.inertia_weight_mode == "vary":
+                self.w = (self.w - 0.4) * (self.N_iter - step) / self.N_iter + 0.4
             for Q_index in range(self.Q):
                 #Calculate velocities
                 Vi[Q_index] = self.constraint_velocity(
@@ -171,7 +184,7 @@ class PSOSVMTrainer():
         self.local_models = local_models
     
     def predict(self, X_test):
-        selected_node_indexs = np.squeeze(np.argwhere(self.Sg > 0))
+        selected_node_indexs = np.squeeze(np.argwhere(self.Sg > 0), axis=1)
         L = len(selected_node_indexs)
         r = np.zeros((L, X_test.shape[0]))
         for index, node_index in enumerate(selected_node_indexs):

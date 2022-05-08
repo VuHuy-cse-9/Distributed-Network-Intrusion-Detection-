@@ -9,9 +9,9 @@ from models.GMM import OnlineGMM
 
 #GLOBAL VARIABLES
 
-def get_kafka_producer():
+def get_kafka_producer(url):
     return KafkaProducer(
-        bootstrap_servers=[hyper.boot_strap_server],
+        bootstrap_servers=[url],
         value_serializer=lambda m: json.dumps(m).encode('ascii')
     )
 
@@ -19,9 +19,9 @@ def get_kafka_producer():
 #     bootstrap_servers=["localhost:9092"],
 #     value_serializer=lambda m: json.dumps(m).encode('ascii')
 # )
-def get_kafka_consumer():
+def get_kafka_consumer(url):
     return KafkaConsumer('model-topic',
-                            bootstrap_servers=[hyper.boot_strap_server],
+                            bootstrap_servers=[url],
                             value_deserializer=lambda m: json.loads(m.decode('ascii')),
                             auto_offset_reset="earliest")
 
@@ -55,15 +55,14 @@ def false_alarm_rate(labels, predicts):
         raise Exception(f"Shape of predicts: {predicts.shape} is not equal shape of lables: {labels.shape}")
     return np.sum((labels != predicts)[labels == 1], dtype=np.float32) / np.sum(labels == 1)
 
-def send_model(model_dict):
-    model_producer = get_kafka_producer()
+def send_model(model_dict, url):
+    model_producer = get_kafka_producer(url)
     future = model_producer.send('model-topic', model_dict)
     try:
         record_metadata = future.get(timeout=10)
     except KafkaError:
     #Decide what to do if produce request failed
         log.exception()
-    pass
     
 # def send_data(X, y):
 #     data_producer.send(
@@ -73,10 +72,10 @@ def send_model(model_dict):
 #         }
 #     )
     
-def _get_models():
-    count_nodes = hyper.N_nodes
+def _get_models(N_nodes, url):
+    count_nodes = N_nodes
     node_models = []
-    model_consumer = get_kafka_consumer()
+    model_consumer = get_kafka_consumer(url)
     for msg in model_consumer:
         node_models.append(msg.value)
         count_nodes -= 1
@@ -100,20 +99,31 @@ def _get_models():
 #         raise Exception(f"Shape of X from _get_data, utils is not right: {X.shape}, or not equal y: {y.shape}")
 #     return X, y
 
-def convert_json_to_local_models(model_params, curr_nodeid, N_nodes, N_classifiers):
-    local_models = np.empty((N_nodes, N_classifiers), dtype= OnlineGMM)
+def convert_json_to_local_models(
+                    model_params, 
+                    curr_nodeid, 
+                    N_nodes, 
+                    N_classifiers, 
+                ):
+    local_models = np.empty((N_nodes, N_classifiers), dtype=OnlineGMM)
     alphas = np.empty((N_nodes, N_classifiers))
+    
     for node_index in range(N_nodes):
         nodeid = int(model_params[node_index]["node"])
         if nodeid == curr_nodeid: continue
         alphas[nodeid] = np.array(model_params[node_index]["alphas"])
         for index in range(N_classifiers):
-            local_models[nodeid, index] = OnlineGMM(hyper.std, n_components=hyper.n_components, T=hyper.T)
+            local_models[nodeid, index] = OnlineGMM(None, None, None)
             local_models[nodeid, index].set_parameters(model_params[node_index][f"model_{index}"])
     return local_models, alphas
 
-def clone_model_from_local(curr_nodeid, N_nodes, N_classifiers):
-    model_params = _get_models()
+def clone_model_from_local(
+            curr_nodeid, 
+            N_nodes, 
+            N_classifiers, 
+            n_components,
+            url):
+    model_params = _get_models(N_nodes, url)
     local_models, alphas = convert_json_to_local_models(model_params, curr_nodeid, N_nodes, N_classifiers)
     return local_models, alphas
 

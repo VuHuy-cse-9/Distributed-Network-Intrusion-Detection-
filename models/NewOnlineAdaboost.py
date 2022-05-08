@@ -2,7 +2,6 @@
 """
 import numpy as np
 from models.GMM import OnlineGMM
-import hyper
 from utils import detection_rate, false_alarm_rate, send_model
 import json
 from tqdm import tqdm
@@ -12,15 +11,24 @@ import copy
 
 
 class NewOnlineAdaboost():
-    def __init__(self):
-        self.r = hyper.r
-        self.p = hyper.p
-        self.P = hyper.P
-        self.gamma = hyper.gamma
-        self.beta = hyper.beta
-        self.eta = 1e-9
-        self.n_components = hyper.n_components
-        self.T = hyper.T
+    def __init__(self, r, 
+                 p, 
+                 P, 
+                 gamma,
+                 beta,
+                 n_components,
+                 T,
+                 default_std,
+                 eta=1e-9):
+        self.r = r
+        self.p = p
+        self.P = P
+        self.gamma = gamma
+        self.beta = beta
+        self.n_components = n_components
+        self.T = T
+        self.std = default_std
+        self.eta = eta
 
     def build(self, n_labels, n_features):
         self.N_classifiers = n_features   #Depend on number of feature
@@ -37,7 +45,7 @@ class NewOnlineAdaboost():
         self.strong_gmms = None
         self.gmms = [] 
         for i in np.arange(self.N_classifiers):
-            gmm = OnlineGMM(hyper.std, n_components=self.n_components, T=self.T)
+            gmm = OnlineGMM(self.std, n_components=self.n_components, T=self.T)
             gmm.build(n_labels=self.N_labels)
             self.gmms.append(gmm)
         self.gmms = np.array(self.gmms)
@@ -159,3 +167,10 @@ class NewOnlineAdaboost():
         self.N_classifiers = N_classifiers
         self.strong_gmms = strong_gmms
         self.alphas = alphas
+        
+    def to_dict(self):
+        model_dict = {}
+        model_dict["alphas"] = self.alphas.tolist()
+        for index, gmms in enumerate(self.strong_gmms):
+            model_dict[f"model_{index}"] = gmms.get_parameters()
+        return model_dict

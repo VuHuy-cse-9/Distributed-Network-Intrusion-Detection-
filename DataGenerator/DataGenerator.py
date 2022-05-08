@@ -51,69 +51,21 @@ def log_transform(df, skew_features):
         data[data > 0] = np.log(data[data > 0])
         df[feature_name] = data
     return df
-        
-    
-        
-def get_data(
-            path, 
-            category_features = None,     #Name of category to be remove
-            skew_features = None,         #Name of skewd feature to be log transform
-            option = 0):                  #Option to process category data
-    df = loadFile(path)
-    #Process Category feature
-    if category_features != None:
-        if option == 0:
-            df = convert_to_int_value(df, category_features)
-        else: #Remove all category data
-            for feature in category_features:
-                del df[feature]
-    #ln transform skew features:
-    if skew_features !=  None:
-        df = log_transform(df, skew_features)
-    feature_names = list(df.columns)
-    Y = df["label"].to_numpy()
-    del df["label"]
-    X = np.array(df.to_numpy(), dtype=np.float64)
-    print(f">> maximum value: {np.max(X)}")
-    Y, labels_to_index, labels = _convert_symbol_to_index(Y)
-    return X, Y, labels_to_index, labels, feature_names
-
-def get_random(data, labels, limit):
-        array_index = np.arange(data.shape[0])
-        np.random.shuffle(array_index)
-        data = data[array_index[:limit],:]
-        labels = labels[array_index[:limit]]
-        return data, labels
-    
-def _convert_attack_to_index(Y):
-    """ Function to convert labels to index, which value 1 for normal, <= -1 for attack
-    args Y (N_samples, )
-    """
-    labels = np.unique(Y)
-    labels_to_index = np.zeros(labels.shape)
-    for index, label in zip(np.arange(len(labels)), labels):
-        Y[Y == label] = hyper.attack_global_train[label]
-        labels_to_index[index] = hyper.attack_global_train[label]
-    print(f"unique: {np.unique(Y)}")
-    return Y, labels_to_index, labels
 
 def get_local_test_dataset(
                 nodeid,
                 path, 
-                category_features = None,     #Name of category to be remove
-                skew_features = None,         #Name of skewd feature to be log transform
-                option = 0):
-    
+                is_log_transform, 
+                option):
     df = loadFile(path)
-    if category_features != None:
-        if option == 0:
-            df = convert_to_int_value(df, category_features)
-        else: #Remove all category data
-            for feature in category_features:
-                del df[feature]
+    if option == "integer":
+        df = convert_to_int_value(df, hyper.category_features)
+    elif option == "remove": 
+        for feature in hyper.category_features:
+            del df[feature]
     #ln transform skew features:
-    if skew_features !=  None:
-        df = log_transform(df, skew_features)
+    if is_log_transform == "True":
+        df = log_transform(df, hyper.skew_features)
     feature_names = list(df.columns)
     
     label = df["label"].to_numpy()
@@ -138,23 +90,21 @@ def get_local_test_dataset(
     Y = Y[array_index]
     
     return X, Y, labels_to_index, labels, feature_names 
-
+        
 def get_local_train_dataset(
                 nodeid,
                 path, 
-                category_features = None,     #Name of category to be remove
-                skew_features = None,         #Name of skewd feature to be log transform
-                option = 0):
+                is_log_transform, 
+                option): #For Global training
     df = loadFile(path)
-    if category_features != None:
-        if option == 0:
-            df = convert_to_int_value(df, category_features)
-        else: #Remove all category data
-            for feature in category_features:
-                del df[feature]
+    if option == "integer":
+        df = convert_to_int_value(df, hyper.category_features)
+    elif option == "remove": 
+        for feature in hyper.category_features:
+            del df[feature]
     #ln transform skew features:
-    if skew_features !=  None:
-        df = log_transform(df, skew_features)
+    if is_log_transform == True:
+        df = log_transform(df, hyper.skew_features)
     feature_names = list(df.columns)
     
     labels = df["label"].to_numpy()
@@ -181,6 +131,85 @@ def get_local_train_dataset(
     Y = Y[array_index]
     
     return X, Y, labels_to_index, labels, feature_names
+
+def get_part_local_train_dataset(nodeid, path, is_log_transform, option):
+    X_train, Y_train, labels_idx, labels, feature_names = \
+        get_local_train_dataset(nodeid, path, is_log_transform, option)
+    X_train_normal = X_train[Y_train == 1][:1000, :]
+    X_train_1 = X_train[Y_train == -1][:500, :]
+    X_train_2 = X_train[Y_train == -2][:500, :]
+    X_train_3 = X_train[Y_train == -3][:500, :]
+    X_train_4 = X_train[Y_train == -4][:500, :]
+    Y_train_normal = Y_train[Y_train == 1][:1000]
+    Y_train_1 = Y_train[Y_train == -1][:500]
+    Y_train_2 = Y_train[Y_train == -2][:500]
+    Y_train_3 = Y_train[Y_train == -3][:500]
+    Y_train_4 = Y_train[Y_train == -4][:500]
+    X_train = np.concatenate((X_train_normal, X_train_1, X_train_2, X_train_3, X_train_4), axis=0)
+    Y_train = np.concatenate((Y_train_normal, Y_train_1, Y_train_2, Y_train_3, Y_train_4), axis=0)
+    array_index = np.arange(len(Y_train))
+    np.random.shuffle(array_index)
+    X_train = X_train[array_index,:]
+    Y_train = Y_train[array_index]
+    return X_train, Y_train, labels_idx, labels, feature_names
+        
+def get_full_data(path, is_log_transform, option):                 
+    df = loadFile(path)
+    #Process Category feature
+    if option == "integer":
+        df = convert_to_int_value(df, hyper.category_features)
+    elif option == "remove": #Remove all category data
+        for feature in hyper.category_features:
+            del df[feature]
+    #ln transform skew features:
+    if is_log_transform == True:
+        df = log_transform(df, hyper.skew_features)
+    feature_names = list(df.columns)
+    Y = df["label"].to_numpy()
+    del df["label"]
+    X = np.array(df.to_numpy(), dtype=np.float64)
+    Y, labels_to_index, labels = _convert_symbol_to_index(Y)
+    return X, Y, labels_to_index, labels, feature_names
+
+def get_part_data(path, is_log_transform, option):
+    X_train, Y_train, labels_idx, labels, feature_names = \
+        get_full_data(path, is_log_transform, option)
+    X_train_normal = X_train[Y_train == 1][:1000, :]
+    X_train_1 = X_train[Y_train == -1][:500, :]
+    X_train_2 = X_train[Y_train == -2][:500, :]
+    X_train_3 = X_train[Y_train == -3][:500, :]
+    X_train_4 = X_train[Y_train == -4][:500, :]
+    Y_train_normal = Y_train[Y_train == 1][:1000]
+    Y_train_1 = Y_train[Y_train == -1][:500]
+    Y_train_2 = Y_train[Y_train == -2][:500]
+    Y_train_3 = Y_train[Y_train == -3][:500]
+    Y_train_4 = Y_train[Y_train == -4][:500]
+    X_train = np.concatenate((X_train_normal, X_train_1, X_train_2, X_train_3, X_train_4), axis=0)
+    Y_train = np.concatenate((Y_train_normal, Y_train_1, Y_train_2, Y_train_3, Y_train_4), axis=0)
+    array_index = np.arange(len(Y_train))
+    np.random.shuffle(array_index)
+    X_train = X_train[array_index,:]
+    Y_train = Y_train[array_index]
+    return X_train, Y_train, labels_idx, labels, feature_names
+
+def get_random(data, labels, limit):
+        array_index = np.arange(data.shape[0])
+        np.random.shuffle(array_index)
+        data = data[array_index[:limit],:]
+        labels = labels[array_index[:limit]]
+        return data, labels
+    
+def _convert_attack_to_index(Y):
+    """ Function to convert labels to index, which value 1 for normal, <= -1 for attack
+    args Y (N_samples, )
+    """
+    labels = np.unique(Y)
+    labels_to_index = np.zeros(labels.shape)
+    for index, label in enumerate(hyper.attack_global_train):
+        Y[Y == label] = hyper.attack_global_train[label]
+        labels_to_index[index] = hyper.attack_global_train[label]
+    print(f"unique: {np.unique(Y)}")
+    return Y, labels_to_index, labels
 
 def _convert_symbol_to_index(Y):
     """ Function to convert labels to index, which value 1 for normal, <= -1 for attack

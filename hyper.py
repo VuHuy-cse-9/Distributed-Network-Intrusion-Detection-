@@ -1,34 +1,3 @@
-#Local
-n_features = 41
-n_labels = 5
-#Global
-# n_features = 41
-# n_labels = 5
-#Random
-# n_features = 41
-# n_labels = 2
-#GMMS HYPERAMETER
-gamma = 10   #Equation (25)
-r = 0.5     #Equation (32)
-p = 0.1     #Equation (23)
-beta = 0.8  #Equation (29)  
-std = 1.0   #Equation (15)
-n_components = 4
-T = 0.5
-#LOCAL HYPERAMTER
-P = 8      #predefined maximum number of iterations
-            #Equation (25)
-#GLOBAL HYPERAMETER
-N_states = 3
-N_nodes = 6
-N_data_local_send = 500
-N_data_global = N_data_local_send * N_nodes 
-tau = 0.75 #Equation (34), weight
-u1, u2 = 0.2, 0.3 #Independent random value, equation (37)
-c1, c2 = 0.1, 0.1 #Acceleration constants, equation (37)
-w = 1.4 #inertia weight
-N_iter = 20
-V_max = 2.0 #Equation (38)
 category_features = [
     "protocol_type",
     "service",
@@ -53,8 +22,6 @@ skew_features = [
     "src_bytes",
     "duration"
 ]
-
-
 
 path_train = "dataset/kddcup1999_10percent.csv"
 path_test = "dataset/test.csv"
