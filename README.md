@@ -1,10 +1,6 @@
 # Online Adaboost-Based Parameterized Methods for Dynamic Distributed Network Intrusion Detection
 
-## Contents
-
-- [Introduction](#introduction)
-- [Setup](#setup)
-- [Data](#Data)
+## Overview
 
 This implementation is used as an assignment for Parallel computing course, Ho Chi Minh University of Technology, Viet Nam. 
 
@@ -70,7 +66,10 @@ In experiment, we use Six nodes from [HPCC Lab](#http://hpcc.hcmut.edu.vn/). How
 - tar -xzf kafka_2.13-3.1.0.tgz
 - cd kafka_2.13-3.1.0
 ### Step 2: Configure Kafka:
-
+Open config/server.properties, uncomment line listeners, change PLAINTEXT as your Kafka node IP address. Example (in my case):
+```
+listeners=10.1.6.7:9092
+```
 ### Step 3. Start Kafka environment:
 You should run command below for Kafka Node. It can be one of six nodes or independent node. Each command below is run on one terminal:
 ```
