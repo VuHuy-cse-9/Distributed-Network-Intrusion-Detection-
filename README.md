@@ -15,7 +15,7 @@ pip install -r requirement.txt
 Project is conducted using only python 3.9.5 and numpy.
 
 ## 💾 KDDcup1999
-You can download data from here [KDDcup1999](#http://kdd.ics.uci.edu/databases/kddcup99/kddcup99.html), we choose file *kddcup.data_10_percent.gz* that is used in paper. 
+You can download data from here [KDDcup1999](http://kdd.ics.uci.edu/databases/kddcup99/kddcup99.html), we choose file *kddcup.data_10_percent.gz* that is used in paper. 
 Put .csv file in folder *dataset/*
 
 ## ⏳ Local training
@@ -59,7 +59,7 @@ Testing data for each node
 
 For exchange models parameter from one node to others, we use Kafka as a Message queue. As long as local training step is finished, node will send model parameters to Kafka broker (Producer) , then wait and receive other Node's model parameters. 
 
-In experiment, we use Six nodes from [HPCC Lab](#http://hpcc.hcmut.edu.vn/). However, you may use Cloud, or serveral laptops, or single computer (if you has more than six cores) as long as you can configure them as below. 
+In experiment, we use Six nodes from [HPCC Lab](http://hpcc.hcmut.edu.vn/). However, you may use Cloud, or serveral laptops, or single computer (if you has more than six cores) as long as you can configure them as below. 
 :
 ### Step 1. Download Kafka:
 - Download from here: [Download](https://www.apache.org/dyn/closer.cgi?path=/kafka/3.1.0/kafka_2.13-3.1.0.tgz)
